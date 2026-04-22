@@ -19,7 +19,6 @@
             min-height: 100vh;
         }
 
-        /* Login Page */
         .login-container {
             min-height: 100vh;
             display: flex;
@@ -49,7 +48,6 @@
             margin-bottom: 20px;
         }
 
-        /* Dashboard */
         .dashboard-container {
             display: none;
         }
@@ -129,7 +127,6 @@
             background: #dc2626;
         }
 
-        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -162,7 +159,6 @@
             color: #1a1a2e;
         }
 
-        /* Tables */
         .table-container {
             background: white;
             border-radius: 20px;
@@ -250,22 +246,6 @@
             background: #d97706;
         }
 
-        .btn-save {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: background 0.3s;
-        }
-
-        .btn-save:hover {
-            background: #059669;
-        }
-
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -316,7 +296,6 @@
             border-color: #667eea;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -390,7 +369,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Page -->
     <div id="loginPage" class="login-container">
         <div class="login-card">
             <div class="login-logo">🚀 FastConnect</div>
@@ -409,7 +387,6 @@
         </div>
     </div>
 
-    <!-- Dashboard -->
     <div id="dashboard" class="dashboard-container">
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -417,21 +394,11 @@
                 <p style="font-size: 0.8rem; opacity: 0.7;">Admin Panel</p>
             </div>
             <div class="sidebar-nav">
-                <div class="nav-item active" data-page="dashboard">
-                    <span>📊</span> <span>Dashboard</span>
-                </div>
-                <div class="nav-item" data-page="users">
-                    <span>👥</span> <span>Active Users</span>
-                </div>
-                <div class="nav-item" data-page="transactions">
-                    <span>💰</span> <span>Transactions</span>
-                </div>
-                <div class="nav-item" data-page="vouchers">
-                    <span>🎟️</span> <span>Vouchers</span>
-                </div>
-                <div class="nav-item" data-page="plans">
-                    <span>📡</span> <span>Manage Plans</span>
-                </div>
+                <div class="nav-item active" data-page="dashboard"><span>📊</span> <span>Dashboard</span></div>
+                <div class="nav-item" data-page="users"><span>👥</span> <span>Active Users</span></div>
+                <div class="nav-item" data-page="transactions"><span>💰</span> <span>Transactions</span></div>
+                <div class="nav-item" data-page="vouchers"><span>🎟️</span> <span>Vouchers</span></div>
+                <div class="nav-item" data-page="plans"><span>📡</span> <span>Manage Plans</span></div>
             </div>
         </div>
 
@@ -442,9 +409,8 @@
                 <button class="logout-btn" id="logoutBtn">Logout</button>
             </div>
 
-            <!-- Dashboard Page -->
             <div id="page-dashboard">
-                <div class="stats-grid" id="statsContainer">
+                <div class="stats-grid">
                     <div class="stat-card"><div class="stat-title">Active Users</div><div class="stat-value" id="statUsers">-</div></div>
                     <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="statRevenue">KSh -</div></div>
                     <div class="stat-card"><div class="stat-title">Today's Revenue</div><div class="stat-value" id="statTodayRevenue">KSh -</div></div>
@@ -452,85 +418,69 @@
                 </div>
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Recent Transactions</h3>
-                    <div style="overflow-x: auto;">
-                        <table id="recentTransactionsTable">
-                            <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="5">Loading...</td></tr>
-                        </table>
-                    </div>
+                    <table id="recentTransactionsTable">
+                        <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
+                        <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Users Page -->
             <div id="page-users" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Active Users</h3>
-                    <div style="overflow-x: auto;">
-                        <table id="usersTable">
-                            <thead><tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr></thead>
-                            <tbody><tr><td colspan="6">Loading...</td></tr>
-                        </table>
-                    </div>
+                    <table id="usersTable">
+                        <thead><tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr></thead>
+                        <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Transactions Page -->
             <div id="page-transactions" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">All Transactions</h3>
-                    <div style="overflow-x: auto;">
-                        <table id="transactionsTable">
-                            <thead><tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="6">Loading...</td></tr>
-                        </table>
-                    </div>
+                    <table id="transactionsTable">
+                        <thead><tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+                        <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Vouchers Page -->
             <div id="page-vouchers" style="display: none;">
                 <div style="margin-bottom: 20px;">
                     <button class="btn-primary" id="createVoucherBtn">+ Create New Voucher</button>
                 </div>
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Vouchers</h3>
-                    <div style="overflow-x: auto;">
-                        <table id="vouchersTable">
-                            <thead><tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
-                            <tbody><tr><td colspan="6">Loading...</td></tr>
-                        </table>
-                    </div>
+                    <table id="vouchersTable">
+                        <thead><tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
+                        <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Plans Page with Edit Capability -->
             <div id="page-plans" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Internet Plans</h3>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Click Edit to modify plans. Changes will reflect immediately on customer portal.</p>
-                    <div style="overflow-x: auto;">
-                        <table id="plansTable">
-                            <thead>
-                                <tr>
-                                    <th>Plan Name</th>
-                                    <th>Duration</th>
-                                    <th>Price (KES)</th>
-                                    <th>Data Limit</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="plansTableBody">
-                                <tr><td colspan="6">Loading...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Edit plans - changes reflect immediately on customer portal</p>
+                    <table id="plansTable">
+                        <thead>
+                            <tr>
+                                <th>Plan Name</th>
+                                <th>Duration</th>
+                                <th>Price (KES)</th>
+                                <th>Data Limit</th>
+                                <th>Speed (Mbps)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plansTableBody"><tr><td colspan="7">Loading...</td></tr></tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Create Voucher Modal -->
     <div id="voucherModal" class="modal">
         <div class="modal-content">
             <h3>Create Voucher</h3>
@@ -549,7 +499,6 @@
         </div>
     </div>
 
-    <!-- Edit Plan Modal -->
     <div id="editPlanModal" class="modal">
         <div class="modal-content">
             <h3>Edit Plan</h3>
@@ -572,6 +521,10 @@
                     <input type="number" id="editPlanDataLimit" required min="0">
                 </div>
                 <div class="form-group">
+                    <label>Speed (Mbps)</label>
+                    <input type="number" id="editPlanSpeed" required min="1" max="100" step="1">
+                </div>
+                <div class="form-group">
                     <label>Status</label>
                     <select id="editPlanStatus">
                         <option value="1">Active</option>
@@ -589,14 +542,12 @@
         let socket = null;
         let currentPage = 'dashboard';
 
-        // Check if already logged in
         if (localStorage.getItem('adminToken')) {
             token = localStorage.getItem('adminToken');
             showDashboard();
             loadDashboardData();
         }
 
-        // Login handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('loginUsername').value;
@@ -631,7 +582,6 @@
             }
         });
 
-        // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await fetch('/api/admin/logout', { method: 'POST' });
             localStorage.removeItem('adminToken');
@@ -648,9 +598,7 @@
         function initWebSocket() {
             try {
                 socket = io(window.location.origin);
-                socket.on('connect', () => {
-                    socket.emit('admin_join');
-                });
+                socket.on('connect', () => socket.emit('admin_join'));
                 socket.on('user_activated', (data) => {
                     showToast(`New user activated: ${data.phoneNumber} - ${data.planName}`);
                     loadDashboardData();
@@ -659,14 +607,6 @@
                 socket.on('payment_completed', (data) => {
                     showToast(`Payment completed: ${data.phoneNumber}`);
                     loadDashboardData();
-                });
-                socket.on('voucher_redeemed', (data) => {
-                    showToast(`Voucher redeemed: ${data.phoneNumber}`);
-                    if (currentPage === 'vouchers') loadVouchers();
-                });
-                socket.on('plans_updated', () => {
-                    showToast('Plans updated! Customer portal will refresh automatically');
-                    if (currentPage === 'plans') loadPlans();
                 });
             } catch(e) { console.log('WebSocket not available'); }
         }
@@ -798,7 +738,7 @@
                 const plans = await apiRequest('/api/admin/plans');
                 const tbody = document.getElementById('plansTableBody');
                 if (plans.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6">No plans found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7">No plans found</td></tr>';
                 } else {
                     tbody.innerHTML = plans.map(p => `
                         <tr>
@@ -806,23 +746,20 @@
                             <td>${p.duration_hours} hours</td>
                             <td>KSh ${p.price_kes}</td>
                             <td>${p.data_limit_mb === 0 ? 'Unlimited' : (p.data_limit_mb >= 1024 ? (p.data_limit_mb/1024).toFixed(1) + ' GB' : p.data_limit_mb + ' MB')}</td>
+                            <td>${p.speed_mbps || 2} Mbps</td>
                             <td><span class="status-badge ${p.is_active ? 'status-active' : 'status-inactive'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
-                            <td>
-                                <button class="btn-edit" onclick="editPlan(${p.id})">✏️ Edit</button>
-                            </td>
+                            <td><button class="btn-edit" onclick="editPlan(${p.id})">✏️ Edit</button></td>
                         </tr>
                     `).join('');
                 }
                 
-                // Populate plan dropdown for voucher creation
                 const planSelect = document.getElementById('voucherPlan');
-                planSelect.innerHTML = plans.filter(p => p.is_active).map(p => `<option value="${p.plan_name}">${p.plan_name} - KSh ${p.price_kes}</option>`).join('');
+                planSelect.innerHTML = plans.filter(p => p.is_active).map(p => `<option value="${p.plan_name}">${p.plan_name} - KSh ${p.price_kes} (${p.speed_mbps || 2} Mbps)</option>`).join('');
             } catch (error) {
                 console.error('Failed to load plans:', error);
             }
         }
 
-        // Edit plan function
         window.editPlan = async (planId) => {
             try {
                 const plans = await apiRequest('/api/admin/plans');
@@ -833,6 +770,7 @@
                     document.getElementById('editPlanDuration').value = plan.duration_hours;
                     document.getElementById('editPlanPrice').value = plan.price_kes;
                     document.getElementById('editPlanDataLimit').value = plan.data_limit_mb;
+                    document.getElementById('editPlanSpeed').value = plan.speed_mbps || 2;
                     document.getElementById('editPlanStatus').value = plan.is_active ? '1' : '0';
                     document.getElementById('editPlanModal').style.display = 'flex';
                 }
@@ -841,7 +779,6 @@
             }
         };
 
-        // Save plan changes
         document.getElementById('editPlanForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -851,6 +788,7 @@
                 duration_hours: parseInt(document.getElementById('editPlanDuration').value),
                 price_kes: parseInt(document.getElementById('editPlanPrice').value),
                 data_limit_mb: parseInt(document.getElementById('editPlanDataLimit').value),
+                speed_mbps: parseInt(document.getElementById('editPlanSpeed').value),
                 is_active: document.getElementById('editPlanStatus').value === '1'
             };
             
@@ -870,7 +808,6 @@
                     document.getElementById('editPlanModal').style.display = 'none';
                     loadPlans();
                     
-                    // Notify all connected clients (captive portal) to refresh plans
                     if (socket) {
                         socket.emit('plans_updated');
                     }
@@ -894,7 +831,6 @@
             }
         };
 
-        // Create voucher
         document.getElementById('createVoucherBtn').addEventListener('click', () => {
             document.getElementById('voucherModal').style.display = 'flex';
         });
@@ -935,7 +871,6 @@
             }
         });
 
-        // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 const page = item.dataset.page;
@@ -954,12 +889,10 @@
             });
         });
 
-        // Mobile menu
         document.getElementById('mobileMenuBtn').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('open');
         });
 
-        // Close modals when clicking outside
         window.addEventListener('click', (e) => {
             const voucherModal = document.getElementById('voucherModal');
             const editModal = document.getElementById('editPlanModal');
@@ -967,7 +900,6 @@
             if (e.target === editModal) editModal.style.display = 'none';
         });
 
-        // Initial load
         setInterval(() => {
             if (token && currentPage === 'dashboard') loadDashboardData();
         }, 30000);

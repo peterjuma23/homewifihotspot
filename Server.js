@@ -55,10 +55,7 @@ async function initDatabase() {
         console.log('✅ MySQL database connected');
         connection.release();
         
-        // Create tables if they don't exist
         await createTables();
-        
-        // Run cleanup on startup
         await pool.execute('CALL cleanup_expired_users()');
         
         return true;
@@ -71,7 +68,6 @@ async function initDatabase() {
 
 async function createTables() {
     try {
-        // Users table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -92,7 +88,6 @@ async function createTables() {
             )
         `);
         
-        // Transactions table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -113,7 +108,6 @@ async function createTables() {
             )
         `);
         
-        // Vouchers table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS vouchers (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -133,7 +127,6 @@ async function createTables() {
             )
         `);
         
-        // Admins table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS admins (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -145,7 +138,6 @@ async function createTables() {
             )
         `);
         
-        // Plans table
         await pool.execute(`
             CREATE TABLE IF NOT EXISTS plans (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -153,45 +145,43 @@ async function createTables() {
                 duration_hours INT NOT NULL,
                 price_kes DECIMAL(10,2) NOT NULL,
                 data_limit_mb INT DEFAULT 0,
+                speed_mbps INT DEFAULT 2,
                 is_active BOOLEAN DEFAULT TRUE,
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
         
-        // Insert default admin if not exists
         const hashedPassword = await bcrypt.hash('Admin@FastConnect2024!', 10);
         await pool.execute(
             `INSERT IGNORE INTO admins (username, password_hash, role) VALUES (?, ?, ?)`,
             ['admin', hashedPassword, 'superadmin']
         );
         
-        // Insert default plans if not exists
         const defaultPlans = [
-            ['2 Hours', 2, 10, 500],
-            ['4 Hours', 4, 15, 1200],
-            ['8 Hours', 8, 25, 2500],
-            ['24 Hours', 24, 40, 5000],
-            ['3 Days', 72, 100, 15000],
-            ['1 Week', 168, 250, 35000],
-            ['1 Month', 720, 800, 100000]
+            ['2 Hours', 2, 10, 500, 2],
+            ['4 Hours', 4, 15, 1200, 2],
+            ['8 Hours', 8, 25, 2500, 2],
+            ['24 Hours', 24, 40, 5000, 2],
+            ['3 Days', 72, 100, 15000, 2],
+            ['1 Week', 168, 250, 35000, 2],
+            ['1 Month', 720, 800, 100000, 2]
         ];
         
         for (const plan of defaultPlans) {
             await pool.execute(
-                `INSERT IGNORE INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, is_active) VALUES (?, ?, ?, ?, 1)`,
+                `INSERT IGNORE INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active) 
+                 VALUES (?, ?, ?, ?, ?, 1)`,
                 plan
             );
         }
         
-        // Insert demo voucher
         await pool.execute(
             `INSERT IGNORE INTO vouchers (voucher_code, plan_name, plan_duration_hours, data_limit_mb, amount, created_by) 
              VALUES (?, ?, ?, ?, ?, ?)`,
             ['FC-DEMO-2024', '24 Hours', 24, 5000, 40, 'system']
         );
         
-        // Create stored procedure for cleanup
         await pool.execute(`
             CREATE PROCEDURE IF NOT EXISTS cleanup_expired_users()
             BEGIN
@@ -207,28 +197,26 @@ async function createTables() {
     }
 }
 
-// In-memory fallback when DB is not available
+// In-memory fallback
 let memoryStore = {
     users: [],
     transactions: [],
     vouchers: [{ voucher_code: 'FC-DEMO-2024', plan_name: '24 Hours', plan_duration_hours: 24, data_limit_mb: 5000, amount: 40, is_used: false }],
     plans: [
-        { id: 1, plan_name: '2 Hours', duration_hours: 2, price_kes: 10, data_limit_mb: 500, is_active: true },
-        { id: 2, plan_name: '4 Hours', duration_hours: 4, price_kes: 15, data_limit_mb: 1200, is_active: true },
-        { id: 3, plan_name: '8 Hours', duration_hours: 8, price_kes: 25, data_limit_mb: 2500, is_active: true },
-        { id: 4, plan_name: '24 Hours', duration_hours: 24, price_kes: 40, data_limit_mb: 5000, is_active: true },
-        { id: 5, plan_name: '3 Days', duration_hours: 72, price_kes: 100, data_limit_mb: 15000, is_active: true },
-        { id: 6, plan_name: '1 Week', duration_hours: 168, price_kes: 250, data_limit_mb: 35000, is_active: true },
-        { id: 7, plan_name: '1 Month', duration_hours: 720, price_kes: 800, data_limit_mb: 100000, is_active: true }
+        { id: 1, plan_name: '2 Hours', duration_hours: 2, price_kes: 10, data_limit_mb: 500, speed_mbps: 2, is_active: true },
+        { id: 2, plan_name: '4 Hours', duration_hours: 4, price_kes: 15, data_limit_mb: 1200, speed_mbps: 2, is_active: true },
+        { id: 3, plan_name: '8 Hours', duration_hours: 8, price_kes: 25, data_limit_mb: 2500, speed_mbps: 2, is_active: true },
+        { id: 4, plan_name: '24 Hours', duration_hours: 24, price_kes: 40, data_limit_mb: 5000, speed_mbps: 2, is_active: true },
+        { id: 5, plan_name: '3 Days', duration_hours: 72, price_kes: 100, data_limit_mb: 15000, speed_mbps: 2, is_active: true },
+        { id: 6, plan_name: '1 Week', duration_hours: 168, price_kes: 250, data_limit_mb: 35000, speed_mbps: 2, is_active: true },
+        { id: 7, plan_name: '1 Month', duration_hours: 720, price_kes: 800, data_limit_mb: 100000, speed_mbps: 2, is_active: true }
     ],
     nextPlanId: 8
 };
 let dbAvailable = false;
 
 // ==================== MIDDLEWARE ====================
-app.use(helmet({
-    contentSecurityPolicy: false,
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
     origin: '*',
     credentials: true,
@@ -239,7 +227,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Cache control headers for captive portal
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.setHeader('Pragma', 'no-cache');
@@ -247,7 +234,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -255,7 +241,6 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==================== AUTH MIDDLEWARE ====================
@@ -290,20 +275,6 @@ function generateTransactionId() {
     return 'TXN' + Date.now() + Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-function getMpesaAccessToken() {
-    if (!M_PESA_CONSUMER_KEY || !M_PESA_CONSUMER_SECRET) {
-        return Promise.reject(new Error('M-Pesa credentials not configured'));
-    }
-    const auth = Buffer.from(`${M_PESA_CONSUMER_KEY}:${M_PESA_CONSUMER_SECRET}`).toString('base64');
-    const url = M_PESA_ENV === 'sandbox' 
-        ? 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
-        : 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-    
-    return axios.get(url, {
-        headers: { Authorization: `Basic ${auth}` }
-    }).then(response => response.data.access_token);
-}
-
 async function processPayment(phoneNumber, amount, planName, planDuration, transactionId) {
     console.log(`Processing payment: ${phoneNumber}, ${amount}, ${planName}`);
     
@@ -330,13 +301,10 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
-            
             await connection.execute(
-                `UPDATE transactions SET status = 'completed', completed_at = NOW(), mpesa_receipt = ? 
-                 WHERE transaction_id = ?`,
+                `UPDATE transactions SET status = 'completed', completed_at = NOW(), mpesa_receipt = ? WHERE transaction_id = ?`,
                 [mpesaReceipt, transactionId]
             );
-            
             await connection.execute(
                 `INSERT INTO users (phone_number, plan_name, data_limit_mb, bytes_used, expires_at, is_active, last_seen)
                  VALUES (?, ?, ?, 0, ?, TRUE, NOW())
@@ -348,7 +316,6 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
                  last_seen = NOW()`,
                 [phoneNumber, planName, dataLimit, expiresAt]
             );
-            
             await connection.commit();
         } catch (error) {
             await connection.rollback();
@@ -391,10 +358,7 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
 
 async function updateTransactionStatus(transactionId, status) {
     if (dbAvailable && pool) {
-        await pool.execute(
-            'UPDATE transactions SET status = ? WHERE transaction_id = ?',
-            [status, transactionId]
-        );
+        await pool.execute('UPDATE transactions SET status = ? WHERE transaction_id = ?', [status, transactionId]);
     } else {
         const txn = memoryStore.transactions.find(t => t.transaction_id === transactionId);
         if (txn) txn.status = status;
@@ -403,7 +367,7 @@ async function updateTransactionStatus(transactionId, status) {
 
 async function getPlanDetails(planName) {
     if (dbAvailable && pool) {
-        const [rows] = await pool.execute('SELECT * FROM plans WHERE plan_name = ? AND is_active = TRUE', [planName]);
+        const [rows] = await pool.execute('SELECT *, speed_mbps FROM plans WHERE plan_name = ? AND is_active = TRUE', [planName]);
         return rows[0];
     } else {
         return memoryStore.plans.find(p => p.plan_name === planName && p.is_active);
@@ -412,7 +376,7 @@ async function getPlanDetails(planName) {
 
 async function getAllPlans() {
     if (dbAvailable && pool) {
-        const [rows] = await pool.execute('SELECT * FROM plans WHERE is_active = TRUE ORDER BY duration_hours');
+        const [rows] = await pool.execute('SELECT *, speed_mbps FROM plans WHERE is_active = TRUE ORDER BY duration_hours');
         return rows;
     } else {
         return memoryStore.plans.filter(p => p.is_active);
@@ -421,7 +385,6 @@ async function getAllPlans() {
 
 // ==================== API ROUTES ====================
 
-// Get all available plans (for customer portal)
 app.get('/api/plans', async (req, res) => {
     try {
         const plans = await getAllPlans();
@@ -431,7 +394,6 @@ app.get('/api/plans', async (req, res) => {
     }
 });
 
-// Initiate M-Pesa payment
 app.post('/api/mpesa/stkpush', async (req, res) => {
     const { phoneNumber, planName, amount } = req.body;
     
@@ -470,14 +432,9 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
     
     await processPayment(formattedPhone, amount, planName, plan?.duration_hours, transactionId);
     
-    res.json({
-        success: true,
-        message: 'STK Push sent successfully',
-        transactionId: transactionId
-    });
+    res.json({ success: true, message: 'STK Push sent successfully', transactionId: transactionId });
 });
 
-// Redeem voucher
 app.post('/api/voucher/redeem', async (req, res) => {
     const { voucherCode, phoneNumber, customerName } = req.body;
     
@@ -489,10 +446,7 @@ app.post('/api/voucher/redeem', async (req, res) => {
         let voucher, plan;
         
         if (dbAvailable && pool) {
-            const [vouchers] = await pool.execute(
-                'SELECT * FROM vouchers WHERE voucher_code = ? AND is_used = FALSE',
-                [voucherCode.toUpperCase()]
-            );
+            const [vouchers] = await pool.execute('SELECT * FROM vouchers WHERE voucher_code = ? AND is_used = FALSE', [voucherCode.toUpperCase()]);
             voucher = vouchers[0];
             
             if (!voucher) {
@@ -502,10 +456,7 @@ app.post('/api/voucher/redeem', async (req, res) => {
             const [plans] = await pool.execute('SELECT * FROM plans WHERE plan_name = ?', [voucher.plan_name]);
             plan = plans[0];
             
-            await pool.execute(
-                'UPDATE vouchers SET is_used = TRUE, used_by_phone = ?, used_at = NOW() WHERE voucher_code = ?',
-                [phoneNumber, voucherCode.toUpperCase()]
-            );
+            await pool.execute('UPDATE vouchers SET is_used = TRUE, used_by_phone = ?, used_at = NOW() WHERE voucher_code = ?', [phoneNumber, voucherCode.toUpperCase()]);
             
             const transactionId = generateTransactionId();
             await pool.execute(
@@ -578,7 +529,6 @@ app.post('/api/voucher/redeem', async (req, res) => {
     }
 });
 
-// Check user status
 app.post('/api/check-status', async (req, res) => {
     const { phoneNumber, macAddress } = req.body;
     
@@ -641,7 +591,6 @@ app.post('/api/check-status', async (req, res) => {
 
 // ==================== ADMIN API ROUTES ====================
 
-// Admin login
 app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -672,13 +621,11 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
-// Admin logout
 app.post('/api/admin/logout', (req, res) => {
     res.clearCookie('admin_token');
     res.json({ success: true });
 });
 
-// Get admin dashboard stats
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
@@ -686,13 +633,10 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
         if (dbAvailable && pool) {
             const [activeCount] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE is_active = TRUE AND expires_at > NOW()');
             stats.activeUsers = activeCount[0].count;
-            
             const [revenue] = await pool.execute('SELECT SUM(amount) as total FROM transactions WHERE status = "completed"');
             stats.totalRevenue = revenue[0].total || 0;
-            
             const [todayRevenue] = await pool.execute('SELECT SUM(amount) as total FROM transactions WHERE status = "completed" AND DATE(completed_at) = CURDATE()');
             stats.todayRevenue = todayRevenue[0].total || 0;
-            
             const [txnCount] = await pool.execute('SELECT COUNT(*) as count FROM transactions WHERE status = "completed"');
             stats.totalTransactions = txnCount[0].count;
         } else {
@@ -712,7 +656,6 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Get all active users
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -731,13 +674,10 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Get all transactions
 app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
-            const [transactions] = await pool.execute(
-                `SELECT * FROM transactions ORDER BY created_at DESC LIMIT 500`
-            );
+            const [transactions] = await pool.execute(`SELECT * FROM transactions ORDER BY created_at DESC LIMIT 500`);
             res.json(transactions);
         } else {
             res.json(memoryStore.transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
@@ -747,7 +687,6 @@ app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Get all plans (for admin)
 app.get('/api/admin/plans', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -761,15 +700,14 @@ app.get('/api/admin/plans', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Update a plan
 app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
-    const { id, plan_name, duration_hours, price_kes, data_limit_mb, is_active } = req.body;
+    const { id, plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active } = req.body;
     
     try {
         if (dbAvailable && pool) {
             await pool.execute(
-                `UPDATE plans SET plan_name = ?, duration_hours = ?, price_kes = ?, data_limit_mb = ?, is_active = ? WHERE id = ?`,
-                [plan_name, duration_hours, price_kes, data_limit_mb, is_active, id]
+                `UPDATE plans SET plan_name = ?, duration_hours = ?, price_kes = ?, data_limit_mb = ?, speed_mbps = ?, is_active = ? WHERE id = ?`,
+                [plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active, id]
             );
         } else {
             const planIndex = memoryStore.plans.findIndex(p => p.id === id);
@@ -780,29 +718,27 @@ app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
                     duration_hours, 
                     price_kes, 
                     data_limit_mb,
+                    speed_mbps,
                     is_active 
                 };
             }
         }
         
-        // Broadcast to all connected clients that plans were updated
         io.emit('plans_updated');
-        
         res.json({ success: true, message: 'Plan updated successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Add a new plan
 app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
-    const { plan_name, duration_hours, price_kes, data_limit_mb } = req.body;
+    const { plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps } = req.body;
     
     try {
         if (dbAvailable && pool) {
             const [result] = await pool.execute(
-                `INSERT INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, is_active) VALUES (?, ?, ?, ?, 1)`,
-                [plan_name, duration_hours, price_kes, data_limit_mb]
+                `INSERT INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active) VALUES (?, ?, ?, ?, ?, 1)`,
+                [plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps || 2]
             );
             io.emit('plans_updated');
             res.json({ success: true, id: result.insertId });
@@ -814,6 +750,7 @@ app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
                 duration_hours,
                 price_kes,
                 data_limit_mb,
+                speed_mbps: speed_mbps || 2,
                 is_active: true
             });
             io.emit('plans_updated');
@@ -824,28 +761,6 @@ app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Delete a plan (soft delete by setting inactive)
-app.delete('/api/admin/plans/:id', authenticateAdmin, async (req, res) => {
-    const { id } = req.params;
-    
-    try {
-        if (dbAvailable && pool) {
-            await pool.execute('UPDATE plans SET is_active = FALSE WHERE id = ?', [id]);
-        } else {
-            const planIndex = memoryStore.plans.findIndex(p => p.id == id);
-            if (planIndex !== -1) {
-                memoryStore.plans[planIndex].is_active = false;
-            }
-        }
-        
-        io.emit('plans_updated');
-        res.json({ success: true, message: 'Plan deactivated successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Create voucher
 app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     const { planName, quantity } = req.body;
     
@@ -886,7 +801,6 @@ app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Get all vouchers
 app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -900,7 +814,6 @@ app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Deactivate user
 app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -915,7 +828,6 @@ app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) 
     }
 });
 
-// M-Pesa Callback endpoint
 app.post('/api/mpesa/callback', async (req, res) => {
     console.log('M-Pesa Callback received:', JSON.stringify(req.body));
     res.json({ ResultCode: 0, ResultDesc: 'Success' });
@@ -931,7 +843,6 @@ io.on('connection', (socket) => {
     });
     
     socket.on('plans_updated', () => {
-        // Broadcast to all connected clients
         io.emit('plans_updated');
     });
     
@@ -944,7 +855,6 @@ io.on('connection', (socket) => {
 async function startServer() {
     dbAvailable = await initDatabase();
     
-    // Serve HTML pages
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'captive-portal.html'));
     });
@@ -953,7 +863,6 @@ async function startServer() {
         res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
     });
     
-    // Health check
     app.get('/health', (req, res) => {
         res.json({ status: 'ok', timestamp: new Date().toISOString(), dbConnected: dbAvailable });
     });

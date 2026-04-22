@@ -20,7 +20,6 @@
             overflow-x: hidden;
         }
 
-        /* Animated background */
         .bg-animation {
             position: fixed;
             top: 0;
@@ -62,7 +61,6 @@
             z-index: 1;
         }
 
-        /* Header */
         .header {
             text-align: center;
             padding: 40px 20px 30px;
@@ -99,33 +97,32 @@
             letter-spacing: 1px;
         }
 
-        /* Refresh indicator */
-        .refresh-indicator {
+        .refresh-notification {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(16, 185, 129, 0.9);
+            background: linear-gradient(135deg, #10b981, #059669);
             backdrop-filter: blur(10px);
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            z-index: 100;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            z-index: 1000;
             display: none;
             align-items: center;
-            gap: 8px;
-            animation: slideInRight 0.3s ease;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
         }
 
-        .refresh-indicator.show {
+        .refresh-notification.show {
             display: flex;
         }
 
-        @keyframes slideInRight {
+        @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
 
-        /* Tabs - Responsive */
         .tabs {
             display: flex;
             justify-content: center;
@@ -160,7 +157,6 @@
             color: white;
         }
 
-        /* Panels */
         .panel {
             display: none;
             animation: fadeIn 0.5s ease;
@@ -175,7 +171,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Plans Grid */
         .plans-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -300,7 +295,6 @@
             box-shadow: 0 8px 20px rgba(99,102,241,0.4);
         }
 
-        /* Simple Form Card */
         .simple-card {
             background: rgba(255,255,255,0.05);
             backdrop-filter: blur(20px);
@@ -403,7 +397,6 @@
             box-shadow: 0 8px 20px rgba(99,102,241,0.3);
         }
 
-        /* Status Display */
         .status-active, .status-inactive {
             text-align: center;
         }
@@ -472,7 +465,6 @@
             min-width: 120px;
         }
 
-        /* Payment Modal */
         .payment-modal {
             display: none;
             position: fixed;
@@ -567,11 +559,6 @@
             transform: scale(1.02);
         }
 
-        .btn-pay:active, .btn-cancel:active, .btn-primary:active, .btn-secondary:active {
-            transform: scale(0.98);
-        }
-
-        /* Toast */
         .toast {
             position: fixed;
             bottom: 30px;
@@ -611,180 +598,43 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Responsive Styles */
         @media (max-width: 1024px) {
-            .plans-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 20px;
-            }
-            .plan-card {
-                padding: 24px 20px;
-            }
-            .plan-name {
-                font-size: 1.5rem;
-            }
-            .price-amount {
-                font-size: 2rem;
-            }
+            .plans-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+            .plan-card { padding: 24px 20px; }
+            .plan-name { font-size: 1.5rem; }
+            .price-amount { font-size: 2rem; }
         }
         
         @media (max-width: 768px) {
-            .container {
-                padding: 16px;
-            }
-            .header {
-                padding: 20px 16px 20px;
-            }
-            .logo {
-                padding: 8px 20px;
-            }
-            .logo-icon {
-                font-size: 1.5rem;
-            }
-            .logo-text {
-                font-size: 1.2rem;
-            }
-            .tagline {
-                font-size: 0.85rem;
-            }
-            .plans-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 16px;
-            }
-            .plan-card {
-                padding: 16px 12px;
-            }
-            .plan-name {
-                font-size: 1.1rem;
-                margin-bottom: 10px;
-            }
-            .feature {
-                font-size: 0.7rem;
-                padding: 3px 0;
-            }
-            .feature::before {
-                font-size: 0.8rem;
-            }
-            .plan-speed {
-                font-size: 0.65rem;
-                padding: 3px 8px;
-            }
-            .price-amount {
-                font-size: 1.3rem;
-            }
-            .price-amount small {
-                font-size: 0.7rem;
-            }
-            .price-label {
-                font-size: 0.65rem;
-            }
-            .select-plan-btn {
-                padding: 8px 12px;
-                font-size: 0.75rem;
-                margin-top: 10px;
-            }
-            .tab-btn {
-                padding: 8px 20px;
-                font-size: 0.85rem;
-            }
-            .simple-card {
-                padding: 24px 20px;
-                margin: 0 16px;
-                width: calc(100% - 32px);
-            }
-            .simple-card h3 {
-                font-size: 1.3rem;
-            }
-            .simple-card .subtitle {
-                font-size: 0.8rem;
-                margin-bottom: 24px;
-            }
-            .form-group {
-                margin-bottom: 16px;
-            }
-            .form-group label {
-                font-size: 0.85rem;
-            }
-            .form-group input {
-                padding: 12px 16px;
-                font-size: 0.9rem;
-            }
-            .btn-primary, .btn-secondary {
-                padding: 12px;
-                font-size: 0.9rem;
-            }
-            .plan-info {
-                padding: 16px;
-            }
-            .info-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 4px;
-            }
-            .info-value {
-                text-align: left;
-            }
-            .action-buttons {
-                flex-direction: column;
-            }
-            .action-buttons .btn-primary,
-            .action-buttons .btn-secondary {
-                width: 100%;
-            }
-            .payment-card {
-                padding: 24px 20px;
-            }
-            .payment-card h3 {
-                font-size: 1.3rem;
-            }
-            .payment-summary {
-                padding: 12px;
-            }
-            .payment-row {
-                font-size: 0.9rem;
-            }
-            .payment-actions {
-                flex-direction: column;
-            }
-            .btn-pay, .btn-cancel {
-                width: 100%;
-                padding: 12px;
-            }
-            .toast {
-                white-space: normal;
-                text-align: center;
-                max-width: 90%;
-                font-size: 0.85rem;
-                padding: 10px 20px;
-            }
+            .container { padding: 16px; }
+            .header { padding: 20px 16px 20px; }
+            .logo { padding: 8px 20px; }
+            .logo-icon { font-size: 1.5rem; }
+            .logo-text { font-size: 1.2rem; }
+            .tagline { font-size: 0.85rem; }
+            .plans-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            .plan-card { padding: 16px 12px; }
+            .plan-name { font-size: 1.1rem; margin-bottom: 10px; }
+            .feature { font-size: 0.7rem; padding: 3px 0; }
+            .feature::before { font-size: 0.8rem; }
+            .plan-speed { font-size: 0.65rem; padding: 3px 8px; }
+            .price-amount { font-size: 1.3rem; }
+            .price-amount small { font-size: 0.7rem; }
+            .price-label { font-size: 0.65rem; }
+            .select-plan-btn { padding: 8px 12px; font-size: 0.75rem; margin-top: 10px; }
+            .tab-btn { padding: 8px 20px; font-size: 0.85rem; }
+            .simple-card { padding: 24px 20px; margin: 0 16px; width: calc(100% - 32px); }
+            .simple-card h3 { font-size: 1.3rem; }
+            .payment-card { padding: 24px 20px; }
+            .toast { white-space: normal; max-width: 90%; font-size: 0.85rem; }
         }
         
         @media (max-width: 480px) {
-            .plans-grid {
-                gap: 12px;
-            }
-            .plan-card {
-                padding: 12px 10px;
-            }
-            .plan-name {
-                font-size: 1rem;
-            }
-            .feature {
-                font-size: 0.65rem;
-            }
-            .price-amount {
-                font-size: 1.1rem;
-            }
-            .select-plan-btn {
-                padding: 6px 10px;
-                font-size: 0.7rem;
-            }
-            .simple-card {
-                padding: 20px 16px;
-            }
-            .simple-card h3 {
-                font-size: 1.2rem;
-            }
+            .plans-grid { gap: 12px; }
+            .plan-card { padding: 12px 10px; }
+            .plan-name { font-size: 1rem; }
+            .price-amount { font-size: 1.1rem; }
+            .select-plan-btn { padding: 6px 10px; font-size: 0.7rem; }
         }
 
         .footer {
@@ -798,9 +648,8 @@
 <body>
     <div class="bg-animation"></div>
     
-    <!-- Refresh Indicator -->
-    <div class="refresh-indicator" id="refreshIndicator">
-        <span>🔄</span> Plans updated by admin
+    <div id="refreshNotification" class="refresh-notification">
+        <span>🔄</span> Plans updated by admin! Refreshing...
     </div>
     
     <div class="container">
@@ -818,7 +667,6 @@
             <button class="tab-btn" data-tab="status">📊 My Status</button>
         </div>
 
-        <!-- Buy Panel -->
         <div class="panel active" id="buy-panel">
             <div class="plans-grid" id="plans-container">
                 <div style="text-align: center; grid-column: 1/-1; padding: 40px;">
@@ -827,12 +675,10 @@
             </div>
         </div>
 
-        <!-- Voucher Panel -->
         <div class="panel" id="voucher-panel">
             <div class="simple-card">
                 <h3>🎟️ Redeem Voucher</h3>
                 <div class="subtitle">Enter your voucher code to get connected</div>
-                
                 <div class="form-group">
                     <label>Voucher Code</label>
                     <input type="text" id="voucher-code" placeholder="Enter voucher code">
@@ -841,22 +687,18 @@
                     <label>Phone Number</label>
                     <input type="tel" id="voucher-phone" placeholder="0712345678">
                 </div>
-                
                 <button class="btn-primary" id="redeem-btn">Redeem Voucher</button>
             </div>
         </div>
 
-        <!-- Status Panel -->
         <div class="panel" id="status-panel">
             <div class="simple-card" id="status-content">
                 <h3>📊 My Status</h3>
                 <div class="subtitle">Check your internet connection status</div>
-                
                 <div class="form-group">
                     <label>Phone Number</label>
                     <input type="tel" id="status-phone" placeholder="0712345678">
                 </div>
-                
                 <button class="btn-secondary" id="check-status-btn">Check Status</button>
             </div>
         </div>
@@ -866,31 +708,18 @@
         </div>
     </div>
 
-    <!-- Payment Modal -->
     <div id="paymentModal" class="payment-modal">
         <div class="payment-card">
             <h3>💳 Complete Payment</h3>
-            
             <div class="payment-summary" id="paymentSummary">
-                <div class="payment-row">
-                    <span>Plan</span>
-                    <span id="summaryPlan">-</span>
-                </div>
-                <div class="payment-row">
-                    <span>Duration</span>
-                    <span id="summaryDuration">-</span>
-                </div>
-                <div class="payment-row total">
-                    <span>Amount</span>
-                    <span id="summaryAmount">KES 0</span>
-                </div>
+                <div class="payment-row"><span>Plan</span><span id="summaryPlan">-</span></div>
+                <div class="payment-row"><span>Duration</span><span id="summaryDuration">-</span></div>
+                <div class="payment-row total"><span>Amount</span><span id="summaryAmount">KES 0</span></div>
             </div>
-
             <div class="form-group">
                 <label>M-Pesa Number</label>
                 <input type="tel" id="paymentPhone" placeholder="0712345678">
             </div>
-
             <div class="payment-actions">
                 <button class="btn-cancel" id="cancelPaymentBtn">Cancel</button>
                 <button class="btn-pay" id="confirmPayBtn">Pay Now</button>
@@ -904,16 +733,21 @@
         let plans = [];
         let isLoadingPlans = false;
 
-        // Initialize Socket.IO
         try {
-            socket = io(window.location.origin);
-            console.log('Socket.IO connected');
+            socket = io(window.location.origin, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5
+            });
             
-            // Listen for plan updates from admin
+            socket.on('connect', () => {
+                console.log('✅ WebSocket connected');
+            });
+            
             socket.on('plans_updated', () => {
-                console.log('Plans updated by admin, refreshing...');
-                showRefreshIndicator();
-                loadPlans();
+                console.log('📡 Plans updated by admin, refreshing...');
+                showRefreshNotification();
+                loadPlans(true);
                 showToast('📡 Plans have been updated by admin', 'info');
             });
             
@@ -926,18 +760,15 @@
                 showToast(`❌ Payment failed`, 'error');
             });
             
-            socket.on('voucher_redeemed', (data) => {
-                showToast(`🎫 Voucher redeemed for ${data.phoneNumber}`, 'success');
-            });
         } catch(e) { 
             console.log('WebSocket not available'); 
         }
 
-        function showRefreshIndicator() {
-            const indicator = document.getElementById('refreshIndicator');
-            indicator.classList.add('show');
+        function showRefreshNotification() {
+            const notification = document.getElementById('refreshNotification');
+            notification.classList.add('show');
             setTimeout(() => {
-                indicator.classList.remove('show');
+                notification.classList.remove('show');
             }, 3000);
         }
 
@@ -949,55 +780,52 @@
             setTimeout(() => toast.remove(), 4000);
         }
 
-        async function loadPlans() {
-            if (isLoadingPlans) return;
+        async function loadPlans(forceRefresh = false) {
+            if (isLoadingPlans && !forceRefresh) return;
             isLoadingPlans = true;
             
             try {
-                const response = await fetch('/api/plans');
+                const response = await fetch('/api/plans', {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
                 const data = await response.json();
                 
                 if (data.success && data.plans && data.plans.length > 0) {
-                    // Add features and speed to each plan
                     plans = data.plans.map(p => ({
                         id: p.id,
                         plan_name: p.plan_name,
                         duration_hours: p.duration_hours,
                         price_kes: p.price_kes,
                         data_limit_mb: p.data_limit_mb || 0,
+                        speed_mbps: p.speed_mbps || 2,
                         is_active: p.is_active,
-                        features: ['Unlimited Data', '2 Mbps Speed'],
-                        speed: '2 Mbps',
-                        popular: p.plan_name === '24 Hours' || p.plan_name === '1 Day'
+                        features: ['Unlimited Data'],
+                        speed: `${p.speed_mbps || 2} Mbps`
                     }));
+                    console.log(`✅ Loaded ${plans.length} plans with speeds`);
                 } else {
-                    // Fallback to default plans
-                    plans = [
-                        { id: 1, plan_name: '2 Hours', duration_hours: 2, price_kes: 10, data_limit_mb: 500, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                        { id: 2, plan_name: '4 Hours', duration_hours: 4, price_kes: 15, data_limit_mb: 1200, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                        { id: 3, plan_name: '8 Hours', duration_hours: 8, price_kes: 25, data_limit_mb: 2500, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                        { id: 4, plan_name: '24 Hours', duration_hours: 24, price_kes: 40, data_limit_mb: 5000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: true },
-                        { id: 5, plan_name: '3 Days', duration_hours: 72, price_kes: 100, data_limit_mb: 15000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                        { id: 6, plan_name: '1 Week', duration_hours: 168, price_kes: 250, data_limit_mb: 35000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                        { id: 7, plan_name: '1 Month', duration_hours: 720, price_kes: 800, data_limit_mb: 100000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false }
-                    ];
+                    plans = getDefaultPlans();
                 }
             } catch (error) {
                 console.error('Failed to load plans:', error);
-                // Use default plans on error
-                plans = [
-                    { id: 1, plan_name: '2 Hours', duration_hours: 2, price_kes: 10, data_limit_mb: 500, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                    { id: 2, plan_name: '4 Hours', duration_hours: 4, price_kes: 15, data_limit_mb: 1200, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                    { id: 3, plan_name: '8 Hours', duration_hours: 8, price_kes: 25, data_limit_mb: 2500, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                    { id: 4, plan_name: '24 Hours', duration_hours: 24, price_kes: 40, data_limit_mb: 5000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: true },
-                    { id: 5, plan_name: '3 Days', duration_hours: 72, price_kes: 100, data_limit_mb: 15000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                    { id: 6, plan_name: '1 Week', duration_hours: 168, price_kes: 250, data_limit_mb: 35000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false },
-                    { id: 7, plan_name: '1 Month', duration_hours: 720, price_kes: 800, data_limit_mb: 100000, features: ['Unlimited Data', '2 Mbps Speed'], speed: '2 Mbps', popular: false }
-                ];
+                plans = getDefaultPlans();
             } finally {
                 isLoadingPlans = false;
                 renderPlans();
             }
+        }
+
+        function getDefaultPlans() {
+            return [
+                { id: 1, plan_name: '2 Hours', duration_hours: 2, price_kes: 10, data_limit_mb: 500, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: false },
+                { id: 2, plan_name: '4 Hours', duration_hours: 4, price_kes: 15, data_limit_mb: 1200, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: false },
+                { id: 3, plan_name: '8 Hours', duration_hours: 8, price_kes: 25, data_limit_mb: 2500, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: false },
+                { id: 4, plan_name: '24 Hours', duration_hours: 24, price_kes: 40, data_limit_mb: 5000, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: true },
+                { id: 5, plan_name: '3 Days', duration_hours: 72, price_kes: 100, data_limit_mb: 15000, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: false },
+                { id: 6, plan_name: '1 Week', duration_hours: 168, price_kes: 250, data_limit_mb: 35000, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: false },
+                { id: 7, plan_name: '1 Month', duration_hours: 720, price_kes: 800, data_limit_mb: 100000, speed_mbps: 2, features: ['Unlimited Data'], speed: '2 Mbps', popular: false }
+            ];
         }
 
         function formatDuration(hours) {
@@ -1011,12 +839,6 @@
             return `${hours} Hours`;
         }
 
-        function formatDataLimit(mb) {
-            if (mb === 0) return 'Unlimited';
-            if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-            return `${mb} MB`;
-        }
-
         function renderPlans() {
             const container = document.getElementById('plans-container');
             if (!container) return;
@@ -1026,12 +848,14 @@
                 return;
             }
             
-            container.innerHTML = plans.map((plan) => `
+            const activePlans = plans.filter(p => p.is_active !== false);
+            
+            container.innerHTML = activePlans.map((plan) => `
                 <div class="plan-card ${plan.popular ? 'popular' : ''}" data-plan='${JSON.stringify(plan)}'>
                     ${plan.popular ? '<div class="popular-badge">★ POPULAR</div>' : ''}
                     <div class="plan-name">${plan.plan_name}</div>
                     <div class="plan-features">
-                        ${plan.features.map(f => `<div class="feature">${f}</div>`).join('')}
+                        <div class="feature">Unlimited Data</div>
                         <div class="plan-speed">⚡ ${plan.speed}</div>
                     </div>
                     <div class="plan-price">
@@ -1061,7 +885,6 @@
             
             const lastPhone = localStorage.getItem('lastPhone');
             document.getElementById('paymentPhone').value = lastPhone || '';
-            
             document.getElementById('paymentModal').classList.add('active');
         }
 
@@ -1226,7 +1049,6 @@
             }
         }
 
-        // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.dataset.tab;
@@ -1244,7 +1066,6 @@
             });
         });
 
-        // Event listeners
         document.getElementById('paymentForm')?.addEventListener('submit', processPayment);
         document.getElementById('cancelPaymentBtn')?.addEventListener('click', closePaymentModal);
         document.getElementById('paymentModal')?.addEventListener('click', (e) => {
@@ -1253,20 +1074,14 @@
         document.getElementById('redeem-btn')?.addEventListener('click', redeemVoucher);
         document.getElementById('check-status-btn')?.addEventListener('click', checkStatus);
 
-        // Pre-fill phone numbers
         const lastPhone = localStorage.getItem('lastPhone');
         if (lastPhone) {
             if (document.getElementById('status-phone')) document.getElementById('status-phone').value = lastPhone;
             if (document.getElementById('voucher-phone')) document.getElementById('voucher-phone').value = lastPhone;
         }
 
-        // Load plans on page load
         loadPlans();
-        
-        // Auto-refresh plans every 60 seconds (fallback if WebSocket fails)
-        setInterval(() => {
-            loadPlans();
-        }, 60000);
+        setInterval(() => loadPlans(), 30000);
     </script>
 </body>
 </html>
