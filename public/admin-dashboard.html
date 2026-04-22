@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastConnect Admin Dashboard</title>
+    <script src="https://cdn.socket.io/4.6.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        /* Login Page */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1a1a2e;
+        }
+
+        .login-logo {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        /* Dashboard */
+        .dashboard-container {
+            display: none;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100%;
+            background: #1a1a2e;
+            color: white;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 25px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.2rem;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-item span:first-child {
+            font-size: 1.2rem;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 20px;
+        }
+
+        .top-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-title {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+
+        /* Tables */
+        .table-container {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            overflow-x: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-inactive { background: #fee2e2; color: #991b1b; }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-pending { background: #fed7aa; color: #92400e; }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .mobile-menu-btn {
+                display: block;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 1100;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="login-logo">🚀 FastConnect</div>
+            <h2>Admin Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" required value="admin">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
+            </form>
+            <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: #666;">
+                Default: admin / Admin@FastConnect2024!
+            </p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>🚀 FastConnect</h3>
+                <p style="font-size: 0.8rem; opacity: 0.7;">Admin Panel</p>
+            </div>
+            <div class="sidebar-nav">
+                <div class="nav-item active" data-page="dashboard">
+                    <span>📊</span> <span>Dashboard</span>
+                </div>
+                <div class="nav-item" data-page="users">
+                    <span>👥</span> <span>Active Users</span>
+                </div>
+                <div class="nav-item" data-page="transactions">
+                    <span>💰</span> <span>Transactions</span>
+                </div>
+                <div class="nav-item" data-page="vouchers">
+                    <span>🎟️</span> <span>Vouchers</span>
+                </div>
+                <div class="nav-item" data-page="plans">
+                    <span>📡</span> <span>Plans</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" style="display: none;">☰</button>
+                <h2 id="pageTitle">Dashboard</h2>
+                <button class="logout-btn" id="logoutBtn">Logout</button>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div id="page-dashboard">
+                <div class="stats-grid" id="statsContainer">
+                    <div class="stat-card"><div class="stat-title">Active Users</div><div class="stat-value" id="statUsers">-</div></div>
+                    <div class="stat-card"><div class="stat-title">Total Revenue</div><div class="stat-value" id="statRevenue">KSh -</div></div>
+                    <div class="stat-card"><div class="stat-title">Today's Revenue</div><div class="stat-value" id="statTodayRevenue">KSh -</div></div>
+                    <div class="stat-card"><div class="stat-title">Transactions</div><div class="stat-value" id="statTransactions">-</div></div>
+                </div>
+                <div class="table-container">
+                    <h3 style="margin-bottom: 15px;">Recent Transactions</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="recentTransactionsTable">
+                            <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
+                            <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Page -->
+            <div id="page-users" style="display: none;">
+                <div class="table-container">
+                    <h3 style="margin-bottom: 15px;">Active Users</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="usersTable">
+                            <thead><tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr></thead>
+                            <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Page -->
+            <div id="page-transactions" style="display: none;">
+                <div class="table-container">
+                    <h3 style="margin-bottom: 15px;">All Transactions</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="transactionsTable">
+                            <thead><tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+                            <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vouchers Page -->
+            <div id="page-vouchers" style="display: none;">
+                <div style="margin-bottom: 20px;">
+                    <button class="btn-primary" id="createVoucherBtn">+ Create New Voucher</button>
+                </div>
+                <div class="table-container">
+                    <h3 style="margin-bottom: 15px;">Vouchers</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="vouchersTable">
+                            <thead><tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
+                            <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plans Page -->
+            <div id="page-plans" style="display: none;">
+                <div class="table-container">
+                    <h3 style="margin-bottom: 15px;">Internet Plans</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="plansTable">
+                            <thead><tr><th>Plan</th><th>Duration</th><th>Price</th><th>Data Limit</th></tr></thead>
+                            <tbody id="plansTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Voucher Modal -->
+    <div id="voucherModal" class="modal">
+        <div class="modal-content">
+            <h3>Create Voucher</h3>
+            <form id="createVoucherForm">
+                <div class="form-group">
+                    <label>Plan</label>
+                    <select id="voucherPlan" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="voucherQuantity" value="1" min="1" max="100" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Generate Vouchers</button>
+                <button type="button" class="btn-primary" id="closeModalBtn" style="margin-top: 10px; background: #666;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let token = null;
+        let socket = null;
+        let currentPage = 'dashboard';
+
+        // Check if already logged in
+        if (localStorage.getItem('adminToken')) {
+            token = localStorage.getItem('adminToken');
+            showDashboard();
+            loadDashboardData();
+        }
+
+        // Login handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    token = data.token;
+                    localStorage.setItem('adminToken', token);
+                    showDashboard();
+                    loadDashboardData();
+                    initWebSocket();
+                } else {
+                    alert('Invalid credentials');
+                }
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await fetch('/api/admin/logout', { method: 'POST' });
+            localStorage.removeItem('adminToken');
+            token = null;
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        });
+
+        function showDashboard() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        function initWebSocket() {
+            try {
+                socket = io(window.location.origin);
+                socket.on('connect', () => {
+                    socket.emit('admin_join');
+                });
+                socket.on('user_activated', (data) => {
+                    showToast(`New user activated: ${data.phoneNumber} - ${data.planName}`);
+                    loadDashboardData();
+                    if (currentPage === 'users') loadUsers();
+                });
+                socket.on('payment_completed', (data) => {
+                    showToast(`Payment completed: ${data.phoneNumber}`);
+                    loadDashboardData();
+                });
+            } catch(e) { console.log('WebSocket not available'); }
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        async function apiRequest(endpoint, options = {}) {
+            const response = await fetch(endpoint, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    ...options.headers
+                }
+            });
+            if (response.status === 401) {
+                localStorage.removeItem('adminToken');
+                location.reload();
+                throw new Error('Unauthorized');
+            }
+            return response.json();
+        }
+
+        async function loadDashboardData() {
+            try {
+                const stats = await apiRequest('/api/admin/stats');
+                document.getElementById('statUsers').textContent = stats.activeUsers || 0;
+                document.getElementById('statRevenue').textContent = `KSh ${(stats.totalRevenue || 0).toLocaleString()}`;
+                document.getElementById('statTodayRevenue').textContent = `KSh ${(stats.todayRevenue || 0).toLocaleString()}`;
+                document.getElementById('statTransactions').textContent = stats.totalTransactions || 0;
+
+                const transactions = await apiRequest('/api/admin/transactions');
+                const tbody = document.querySelector('#recentTransactionsTable tbody');
+                if (transactions.slice(0, 10).length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">No transactions found</td></tr>';
+                } else {
+                    tbody.innerHTML = transactions.slice(0, 10).map(t => `
+                        <tr>
+                            <td>${new Date(t.created_at).toLocaleString()}</td>
+                            <td>${t.phone_number}</td>
+                            <td>${t.plan_name || '-'}</td>
+                            <td>KSh ${t.amount}</td>
+                            <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const users = await apiRequest('/api/admin/users');
+                const tbody = document.querySelector('#usersTable tbody');
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No active users found</td></tr>';
+                } else {
+                    tbody.innerHTML = users.map(u => `
+                        <tr>
+                            <td>${u.phone_number}</td>
+                            <td>${u.name || '-'}</td>
+                            <td>${u.plan_name}</td>
+                            <td>${new Date(u.expires_at).toLocaleString()}</td>
+                            <td>${u.bytes_used ? (u.bytes_used/1024/1024).toFixed(1) : 0} MB / ${u.data_limit_mb} MB</td>
+                            <td><button class="btn-danger" onclick="deactivateUser(${u.id})">Deactivate</button></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                const transactions = await apiRequest('/api/admin/transactions');
+                const tbody = document.querySelector('#transactionsTable tbody');
+                if (transactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No transactions found</td></tr>';
+                } else {
+                    tbody.innerHTML = transactions.map(t => `
+                        <tr>
+                            <td>${new Date(t.created_at).toLocaleString()}</td>
+                            <td>${t.phone_number}</td>
+                            <td>${t.plan_name || '-'}</td>
+                            <td>KSh ${t.amount}</td>
+                            <td>${t.payment_method === 'voucher' ? '🎫 Voucher' : '📱 M-Pesa'}</td>
+                            <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load transactions:', error);
+            }
+        }
+
+        async function loadVouchers() {
+            try {
+                const vouchers = await apiRequest('/api/admin/vouchers');
+                const tbody = document.querySelector('#vouchersTable tbody');
+                if (vouchers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No vouchers found</td></tr>';
+                } else {
+                    tbody.innerHTML = vouchers.map(v => `
+                        <tr>
+                            <td><code>${v.voucher_code}</code></td>
+                            <td>${v.plan_name}</td>
+                            <td>KSh ${v.amount}</td>
+                            <td><span class="status-badge ${v.is_used ? 'status-inactive' : 'status-active'}">${v.is_used ? 'Used' : 'Active'}</span></td>
+                            <td>${v.used_by_phone || '-'}</td>
+                            <td>${new Date(v.created_at).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load vouchers:', error);
+            }
+        }
+
+        function loadPlans() {
+            const plans = [
+                { plan_name: '2 Hours', duration_hours: 2, price_kes: 20, data_limit_mb: 500 },
+                { plan_name: '5 Hours', duration_hours: 5, price_kes: 40, data_limit_mb: 1200 },
+                { plan_name: '1 Day', duration_hours: 24, price_kes: 70, data_limit_mb: 3000 },
+                { plan_name: '3 Days', duration_hours: 72, price_kes: 150, data_limit_mb: 6000 },
+                { plan_name: '1 Week', duration_hours: 168, price_kes: 300, data_limit_mb: 15000 },
+                { plan_name: '1 Month', duration_hours: 720, price_kes: 1000, data_limit_mb: 50000 }
+            ];
+            document.getElementById('plansTableBody').innerHTML = plans.map(p => `
+                <tr>
+                    <td><strong>${p.plan_name}</strong></td>
+                    <td>${p.duration_hours} hours</td>
+                    <td>KSh ${p.price_kes}</td>
+                    <td>${p.data_limit_mb >= 1024 ? (p.data_limit_mb/1024).toFixed(1) + ' GB' : p.data_limit_mb + ' MB'}</td>
+                </tr>
+            `).join('');
+            
+            // Populate plan dropdown for voucher creation
+            const planSelect = document.getElementById('voucherPlan');
+            planSelect.innerHTML = plans.map(p => `<option value="${p.plan_name}">${p.plan_name} - KSh ${p.price_kes}</option>`).join('');
+        }
+
+        window.deactivateUser = async (userId) => {
+            if (confirm('Deactivate this user?')) {
+                await apiRequest(`/api/admin/users/${userId}/deactivate`, { method: 'POST' });
+                showToast('User deactivated');
+                loadUsers();
+                loadDashboardData();
+            }
+        };
+
+        // Create voucher
+        document.getElementById('createVoucherBtn').addEventListener('click', () => {
+            document.getElementById('voucherModal').style.display = 'flex';
+        });
+
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('voucherModal').style.display = 'none';
+        });
+
+        document.getElementById('createVoucherForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const planName = document.getElementById('voucherPlan').value;
+            const quantity = parseInt(document.getElementById('voucherQuantity').value);
+            
+            try {
+                const result = await apiRequest('/api/admin/vouchers', {
+                    method: 'POST',
+                    body: JSON.stringify({ planName, quantity })
+                });
+                if (result.success) {
+                    showToast(`Created ${quantity} voucher(s)`);
+                    document.getElementById('voucherModal').style.display = 'none';
+                    loadVouchers();
+                }
+            } catch (error) {
+                alert('Failed to create vouchers');
+            }
+        });
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const page = item.dataset.page;
+                currentPage = page;
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
+                document.getElementById(`page-${page}`).style.display = 'block';
+                document.getElementById('pageTitle').textContent = item.querySelector('span:last-child').textContent;
+                
+                // Load page data
+                if (page === 'users') loadUsers();
+                if (page === 'transactions') loadTransactions();
+                if (page === 'vouchers') loadVouchers();
+                if (page === 'plans') loadPlans();
+                if (page === 'dashboard') loadDashboardData();
+            });
+        });
+
+        // Mobile menu
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('open');
+        });
+
+        // Initial load
+        loadPlans();
+        setInterval(() => {
+            if (token && currentPage === 'dashboard') loadDashboardData();
+        }, 30000);
+    </script>
+</body>
+</html>
