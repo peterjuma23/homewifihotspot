@@ -30,7 +30,7 @@ const M_PESA_CONSUMER_KEY = process.env.M_PESA_CONSUMER_KEY || '';
 const M_PESA_CONSUMER_SECRET = process.env.M_PESA_CONSUMER_SECRET || '';
 const M_PESA_PASSKEY = process.env.M_PESA_PASSKEY || '';
 const M_PESA_SHORTCODE = process.env.M_PESA_SHORTCODE || '174379';
-const M_PESA_ENV = process.env.M_PESA_ENV || 'sandbox'; // sandbox or production
+const M_PESA_ENV = process.env.M_PESA_ENV || 'sandbox';
 const BUSINESS_SHORT_CODE = M_PESA_SHORTCODE;
 const CALLBACK_URL = process.env.CALLBACK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}/api/mpesa/callback`;
 
@@ -51,10 +51,12 @@ async function initDatabase() {
             keepAliveInitialDelay: 0
         });
         
-        // Test connection
         const connection = await pool.getConnection();
         console.log('✅ MySQL database connected');
         connection.release();
+        
+        // Create tables if they don't exist
+        await createTables();
         
         // Run cleanup on startup
         await pool.execute('CALL cleanup_expired_users()');
@@ -67,19 +69,159 @@ async function initDatabase() {
     }
 }
 
+async function createTables() {
+    try {
+        // Users table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                phone_number VARCHAR(15) NOT NULL UNIQUE,
+                name VARCHAR(100),
+                email VARCHAR(100),
+                mac_address VARCHAR(17),
+                is_active BOOLEAN DEFAULT FALSE,
+                plan_name VARCHAR(50),
+                data_limit_mb INT DEFAULT 0,
+                bytes_used BIGINT DEFAULT 0,
+                expires_at DATETIME,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_seen DATETIME,
+                INDEX idx_phone (phone_number),
+                INDEX idx_active (is_active),
+                INDEX idx_expires (expires_at)
+            )
+        `);
+        
+        // Transactions table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                transaction_id VARCHAR(100) UNIQUE NOT NULL,
+                phone_number VARCHAR(15) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                plan_name VARCHAR(50),
+                plan_duration_hours INT,
+                payment_method ENUM('mpesa', 'voucher') DEFAULT 'mpesa',
+                mpesa_receipt VARCHAR(50),
+                voucher_code VARCHAR(50),
+                status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at DATETIME,
+                INDEX idx_phone (phone_number),
+                INDEX idx_status (status),
+                INDEX idx_created (created_at)
+            )
+        `);
+        
+        // Vouchers table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS vouchers (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                voucher_code VARCHAR(50) UNIQUE NOT NULL,
+                plan_name VARCHAR(50) NOT NULL,
+                plan_duration_hours INT NOT NULL,
+                data_limit_mb INT,
+                amount DECIMAL(10,2),
+                is_used BOOLEAN DEFAULT FALSE,
+                used_by_phone VARCHAR(15),
+                used_at DATETIME,
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME,
+                INDEX idx_code (voucher_code),
+                INDEX idx_used (is_used)
+            )
+        `);
+        
+        // Admins table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS admins (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role ENUM('superadmin', 'admin') DEFAULT 'admin',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login DATETIME
+            )
+        `);
+        
+        // Plans table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS plans (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                plan_name VARCHAR(50) UNIQUE NOT NULL,
+                duration_hours INT NOT NULL,
+                price_kes DECIMAL(10,2) NOT NULL,
+                data_limit_mb INT DEFAULT 0,
+                is_active BOOLEAN DEFAULT TRUE,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        
+        // Insert default admin if not exists
+        const hashedPassword = await bcrypt.hash('Admin@FastConnect2024!', 10);
+        await pool.execute(
+            `INSERT IGNORE INTO admins (username, password_hash, role) VALUES (?, ?, ?)`,
+            ['admin', hashedPassword, 'superadmin']
+        );
+        
+        // Insert default plans if not exists
+        const defaultPlans = [
+            ['2 Hours', 2, 10, 500],
+            ['4 Hours', 4, 15, 1200],
+            ['8 Hours', 8, 25, 2500],
+            ['24 Hours', 24, 40, 5000],
+            ['3 Days', 72, 100, 15000],
+            ['1 Week', 168, 250, 35000],
+            ['1 Month', 720, 800, 100000]
+        ];
+        
+        for (const plan of defaultPlans) {
+            await pool.execute(
+                `INSERT IGNORE INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, is_active) VALUES (?, ?, ?, ?, 1)`,
+                plan
+            );
+        }
+        
+        // Insert demo voucher
+        await pool.execute(
+            `INSERT IGNORE INTO vouchers (voucher_code, plan_name, plan_duration_hours, data_limit_mb, amount, created_by) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            ['FC-DEMO-2024', '24 Hours', 24, 5000, 40, 'system']
+        );
+        
+        // Create stored procedure for cleanup
+        await pool.execute(`
+            CREATE PROCEDURE IF NOT EXISTS cleanup_expired_users()
+            BEGIN
+                UPDATE users 
+                SET is_active = FALSE 
+                WHERE expires_at < NOW() AND is_active = TRUE;
+            END
+        `);
+        
+        console.log('✅ Database tables created successfully');
+    } catch (error) {
+        console.error('❌ Error creating tables:', error.message);
+    }
+}
+
 // In-memory fallback when DB is not available
 let memoryStore = {
     users: [],
     transactions: [],
-    vouchers: [{ voucher_code: 'FC-DEMO-2024', plan_name: '1 Day', plan_duration_hours: 24, data_limit_mb: 3000, is_used: false }],
+    vouchers: [{ voucher_code: 'FC-DEMO-2024', plan_name: '24 Hours', plan_duration_hours: 24, data_limit_mb: 5000, amount: 40, is_used: false }],
     plans: [
-        { plan_name: '2 Hours', duration_hours: 2, price_kes: 20, data_limit_mb: 500 },
-        { plan_name: '5 Hours', duration_hours: 5, price_kes: 40, data_limit_mb: 1200 },
-        { plan_name: '1 Day', duration_hours: 24, price_kes: 70, data_limit_mb: 3000 },
-        { plan_name: '3 Days', duration_hours: 72, price_kes: 150, data_limit_mb: 6000 },
-        { plan_name: '1 Week', duration_hours: 168, price_kes: 300, data_limit_mb: 15000 },
-        { plan_name: '1 Month', duration_hours: 720, price_kes: 1000, data_limit_mb: 50000 }
-    ]
+        { id: 1, plan_name: '2 Hours', duration_hours: 2, price_kes: 10, data_limit_mb: 500, is_active: true },
+        { id: 2, plan_name: '4 Hours', duration_hours: 4, price_kes: 15, data_limit_mb: 1200, is_active: true },
+        { id: 3, plan_name: '8 Hours', duration_hours: 8, price_kes: 25, data_limit_mb: 2500, is_active: true },
+        { id: 4, plan_name: '24 Hours', duration_hours: 24, price_kes: 40, data_limit_mb: 5000, is_active: true },
+        { id: 5, plan_name: '3 Days', duration_hours: 72, price_kes: 100, data_limit_mb: 15000, is_active: true },
+        { id: 6, plan_name: '1 Week', duration_hours: 168, price_kes: 250, data_limit_mb: 35000, is_active: true },
+        { id: 7, plan_name: '1 Month', duration_hours: 720, price_kes: 800, data_limit_mb: 100000, is_active: true }
+    ],
+    nextPlanId: 8
 };
 let dbAvailable = false;
 
@@ -107,7 +249,7 @@ app.use((req, res, next) => {
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 100,
     message: { error: 'Too many requests, please try again later.' }
 });
@@ -163,13 +305,10 @@ function getMpesaAccessToken() {
 }
 
 async function processPayment(phoneNumber, amount, planName, planDuration, transactionId) {
-    // This is a mock implementation for Render free tier
-    // For real M-Pesa, you'd call the STK Push API
     console.log(`Processing payment: ${phoneNumber}, ${amount}, ${planName}`);
     
-    // Simulate async payment processing
     setTimeout(async () => {
-        const success = Math.random() > 0.1; // 90% success rate for demo
+        const success = Math.random() > 0.1;
         if (success) {
             await completeTransaction(transactionId, phoneNumber, planName, planDuration, 'MPESA' + Date.now());
             io.emit('payment_completed', { phoneNumber, planName, status: 'success' });
@@ -192,14 +331,12 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
         try {
             await connection.beginTransaction();
             
-            // Update transaction
             await connection.execute(
                 `UPDATE transactions SET status = 'completed', completed_at = NOW(), mpesa_receipt = ? 
                  WHERE transaction_id = ?`,
                 [mpesaReceipt, transactionId]
             );
             
-            // Upsert user
             await connection.execute(
                 `INSERT INTO users (phone_number, plan_name, data_limit_mb, bytes_used, expires_at, is_active, last_seen)
                  VALUES (?, ?, ?, 0, ?, TRUE, NOW())
@@ -220,7 +357,6 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
             connection.release();
         }
     } else {
-        // In-memory update
         const txn = memoryStore.transactions.find(t => t.transaction_id === transactionId);
         if (txn) {
             txn.status = 'completed';
@@ -250,7 +386,6 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
         }
     }
     
-    // Notify all admins via WebSocket
     io.emit('user_activated', { phoneNumber, planName, expiresAt });
 }
 
@@ -268,25 +403,25 @@ async function updateTransactionStatus(transactionId, status) {
 
 async function getPlanDetails(planName) {
     if (dbAvailable && pool) {
-        const [rows] = await pool.execute('SELECT * FROM plans WHERE plan_name = ?', [planName]);
+        const [rows] = await pool.execute('SELECT * FROM plans WHERE plan_name = ? AND is_active = TRUE', [planName]);
         return rows[0];
     } else {
-        return memoryStore.plans.find(p => p.plan_name === planName);
+        return memoryStore.plans.find(p => p.plan_name === planName && p.is_active);
     }
 }
 
 async function getAllPlans() {
     if (dbAvailable && pool) {
-        const [rows] = await pool.execute('SELECT * FROM plans WHERE is_active = TRUE');
+        const [rows] = await pool.execute('SELECT * FROM plans WHERE is_active = TRUE ORDER BY duration_hours');
         return rows;
     } else {
-        return memoryStore.plans;
+        return memoryStore.plans.filter(p => p.is_active);
     }
 }
 
 // ==================== API ROUTES ====================
 
-// Get all available plans
+// Get all available plans (for customer portal)
 app.get('/api/plans', async (req, res) => {
     try {
         const plans = await getAllPlans();
@@ -304,7 +439,6 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    // Format phone number (2547XXXXXXXX)
     let formattedPhone = phoneNumber.replace(/\D/g, '');
     if (formattedPhone.startsWith('0')) {
         formattedPhone = '254' + formattedPhone.substring(1);
@@ -316,7 +450,6 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
     const transactionId = generateTransactionId();
     const plan = await getPlanDetails(planName);
     
-    // Save transaction
     if (dbAvailable && pool) {
         await pool.execute(
             `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, status)
@@ -335,8 +468,7 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
         });
     }
     
-    // Process payment
-    const paymentResult = await processPayment(formattedPhone, amount, planName, plan?.duration_hours, transactionId);
+    await processPayment(formattedPhone, amount, planName, plan?.duration_hours, transactionId);
     
     res.json({
         success: true,
@@ -370,13 +502,11 @@ app.post('/api/voucher/redeem', async (req, res) => {
             const [plans] = await pool.execute('SELECT * FROM plans WHERE plan_name = ?', [voucher.plan_name]);
             plan = plans[0];
             
-            // Mark voucher as used
             await pool.execute(
                 'UPDATE vouchers SET is_used = TRUE, used_by_phone = ?, used_at = NOW() WHERE voucher_code = ?',
                 [phoneNumber, voucherCode.toUpperCase()]
             );
             
-            // Create transaction record
             const transactionId = generateTransactionId();
             await pool.execute(
                 `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, payment_method, voucher_code, status, completed_at)
@@ -384,7 +514,6 @@ app.post('/api/voucher/redeem', async (req, res) => {
                 [transactionId, phoneNumber, voucher.amount, voucher.plan_name, voucher.plan_duration_hours, voucherCode]
             );
             
-            // Activate user
             const expiresAt = new Date(Date.now() + voucher.plan_duration_hours * 60 * 60 * 1000);
             await pool.execute(
                 `INSERT INTO users (phone_number, name, plan_name, data_limit_mb, bytes_used, expires_at, is_active, last_seen)
@@ -399,7 +528,6 @@ app.post('/api/voucher/redeem', async (req, res) => {
                 [phoneNumber, customerName || null, voucher.plan_name, voucher.data_limit_mb || 0, expiresAt, customerName || null]
             );
         } else {
-            // In-memory voucher redemption
             voucher = memoryStore.vouchers.find(v => v.voucher_code === voucherCode.toUpperCase() && !v.is_used);
             if (!voucher) {
                 return res.status(404).json({ error: 'Invalid or already used voucher code' });
@@ -450,7 +578,7 @@ app.post('/api/voucher/redeem', async (req, res) => {
     }
 });
 
-// Check user status (for captive portal)
+// Check user status
 app.post('/api/check-status', async (req, res) => {
     const { phoneNumber, macAddress } = req.body;
     
@@ -529,7 +657,6 @@ app.post('/api/admin/login', async (req, res) => {
                 }
             }
         } else {
-            // Default admin check for demo
             isValid = (username === 'admin' && password === 'Admin@FastConnect2024!');
         }
         
@@ -620,6 +747,104 @@ app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Get all plans (for admin)
+app.get('/api/admin/plans', authenticateAdmin, async (req, res) => {
+    try {
+        if (dbAvailable && pool) {
+            const [plans] = await pool.execute('SELECT * FROM plans ORDER BY duration_hours');
+            res.json(plans);
+        } else {
+            res.json(memoryStore.plans);
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update a plan
+app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
+    const { id, plan_name, duration_hours, price_kes, data_limit_mb, is_active } = req.body;
+    
+    try {
+        if (dbAvailable && pool) {
+            await pool.execute(
+                `UPDATE plans SET plan_name = ?, duration_hours = ?, price_kes = ?, data_limit_mb = ?, is_active = ? WHERE id = ?`,
+                [plan_name, duration_hours, price_kes, data_limit_mb, is_active, id]
+            );
+        } else {
+            const planIndex = memoryStore.plans.findIndex(p => p.id === id);
+            if (planIndex !== -1) {
+                memoryStore.plans[planIndex] = { 
+                    ...memoryStore.plans[planIndex], 
+                    plan_name, 
+                    duration_hours, 
+                    price_kes, 
+                    data_limit_mb,
+                    is_active 
+                };
+            }
+        }
+        
+        // Broadcast to all connected clients that plans were updated
+        io.emit('plans_updated');
+        
+        res.json({ success: true, message: 'Plan updated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add a new plan
+app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
+    const { plan_name, duration_hours, price_kes, data_limit_mb } = req.body;
+    
+    try {
+        if (dbAvailable && pool) {
+            const [result] = await pool.execute(
+                `INSERT INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, is_active) VALUES (?, ?, ?, ?, 1)`,
+                [plan_name, duration_hours, price_kes, data_limit_mb]
+            );
+            io.emit('plans_updated');
+            res.json({ success: true, id: result.insertId });
+        } else {
+            const newId = memoryStore.nextPlanId++;
+            memoryStore.plans.push({
+                id: newId,
+                plan_name,
+                duration_hours,
+                price_kes,
+                data_limit_mb,
+                is_active: true
+            });
+            io.emit('plans_updated');
+            res.json({ success: true, id: newId });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete a plan (soft delete by setting inactive)
+app.delete('/api/admin/plans/:id', authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        if (dbAvailable && pool) {
+            await pool.execute('UPDATE plans SET is_active = FALSE WHERE id = ?', [id]);
+        } else {
+            const planIndex = memoryStore.plans.findIndex(p => p.id == id);
+            if (planIndex !== -1) {
+                memoryStore.plans[planIndex].is_active = false;
+            }
+        }
+        
+        io.emit('plans_updated');
+        res.json({ success: true, message: 'Plan deactivated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Create voucher
 app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     const { planName, quantity } = req.body;
@@ -675,7 +900,7 @@ app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Deactivate user (disconnect)
+// Deactivate user
 app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -693,7 +918,6 @@ app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) 
 // M-Pesa Callback endpoint
 app.post('/api/mpesa/callback', async (req, res) => {
     console.log('M-Pesa Callback received:', JSON.stringify(req.body));
-    // Process callback and update transaction
     res.json({ ResultCode: 0, ResultDesc: 'Success' });
 });
 
@@ -704,6 +928,11 @@ io.on('connection', (socket) => {
     socket.on('admin_join', () => {
         socket.join('admin_room');
         console.log('Admin joined room');
+    });
+    
+    socket.on('plans_updated', () => {
+        // Broadcast to all connected clients
+        io.emit('plans_updated');
     });
     
     socket.on('disconnect', () => {
@@ -724,7 +953,7 @@ async function startServer() {
         res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
     });
     
-    // Health check for Render
+    // Health check
     app.get('/health', (req, res) => {
         res.json({ status: 'ok', timestamp: new Date().toISOString(), dbConnected: dbAvailable });
     });
