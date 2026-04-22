@@ -122,6 +122,11 @@
             padding: 8px 20px;
             border-radius: 8px;
             cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
         }
 
         /* Stats Cards */
@@ -137,6 +142,12 @@
             border-radius: 20px;
             padding: 20px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .stat-title {
@@ -177,11 +188,16 @@
             color: #1a1a2e;
         }
 
+        tr:hover {
+            background: #f8fafc;
+        }
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 50px;
             font-size: 0.8rem;
             font-weight: 600;
+            display: inline-block;
         }
 
         .status-active { background: #d1fae5; color: #065f46; }
@@ -197,6 +213,11 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
+            transition: background 0.3s;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
         }
 
         .btn-primary {
@@ -206,6 +227,42 @@
             padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-edit {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-right: 5px;
+            transition: background 0.3s;
+        }
+
+        .btn-edit:hover {
+            background: #d97706;
+        }
+
+        .btn-save {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.3s;
+        }
+
+        .btn-save:hover {
+            background: #059669;
         }
 
         /* Modal */
@@ -230,6 +287,11 @@
             max-width: 500px;
         }
 
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #1a1a2e;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -238,6 +300,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
+            color: #333;
         }
 
         .form-group input, .form-group select {
@@ -245,6 +308,12 @@
             padding: 10px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
         }
 
         /* Responsive */
@@ -267,6 +336,10 @@
                 border: none;
                 font-size: 1.5rem;
                 cursor: pointer;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 0.85rem;
             }
         }
 
@@ -300,6 +373,20 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        .mobile-menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
@@ -311,7 +398,7 @@
             <form id="loginForm">
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="loginUsername" required value="admin">
+                    <input type="text" id="loginUsername" required>
                 </div>
                 <div class="form-group">
                     <label>Password</label>
@@ -319,9 +406,6 @@
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
             </form>
-            <p style="text-align: center; margin-top: 20px; font-size: 0.8rem; color: #666;">
-                Default: admin / Admin@FastConnect2024!
-            </p>
         </div>
     </div>
 
@@ -346,14 +430,14 @@
                     <span>🎟️</span> <span>Vouchers</span>
                 </div>
                 <div class="nav-item" data-page="plans">
-                    <span>📡</span> <span>Plans</span>
+                    <span>📡</span> <span>Manage Plans</span>
                 </div>
             </div>
         </div>
 
         <div class="main-content">
             <div class="top-bar">
-                <button class="mobile-menu-btn" id="mobileMenuBtn" style="display: none;">☰</button>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
                 <h2 id="pageTitle">Dashboard</h2>
                 <button class="logout-btn" id="logoutBtn">Logout</button>
             </div>
@@ -371,7 +455,7 @@
                     <div style="overflow-x: auto;">
                         <table id="recentTransactionsTable">
                             <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+                            <tbody><tr><td colspan="5">Loading...</td></tr>
                         </table>
                     </div>
                 </div>
@@ -384,7 +468,7 @@
                     <div style="overflow-x: auto;">
                         <table id="usersTable">
                             <thead><tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr></thead>
-                            <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                            <tbody><tr><td colspan="6">Loading...</td></tr>
                         </table>
                     </div>
                 </div>
@@ -397,7 +481,7 @@
                     <div style="overflow-x: auto;">
                         <table id="transactionsTable">
                             <thead><tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                            <tbody><tr><td colspan="6">Loading...</td></tr>
                         </table>
                     </div>
                 </div>
@@ -413,20 +497,32 @@
                     <div style="overflow-x: auto;">
                         <table id="vouchersTable">
                             <thead><tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
-                            <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                            <tbody><tr><td colspan="6">Loading...</td></tr>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Plans Page -->
+            <!-- Plans Page with Edit Capability -->
             <div id="page-plans" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Internet Plans</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Click Edit to modify plans. Changes will reflect immediately on customer portal.</p>
                     <div style="overflow-x: auto;">
                         <table id="plansTable">
-                            <thead><tr><th>Plan</th><th>Duration</th><th>Price</th><th>Data Limit</th></tr></thead>
-                            <tbody id="plansTableBody"></tbody>
+                            <thead>
+                                <tr>
+                                    <th>Plan Name</th>
+                                    <th>Duration</th>
+                                    <th>Price (KES)</th>
+                                    <th>Data Limit</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plansTableBody">
+                                <tr><td colspan="6">Loading...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -453,6 +549,41 @@
         </div>
     </div>
 
+    <!-- Edit Plan Modal -->
+    <div id="editPlanModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Plan</h3>
+            <form id="editPlanForm">
+                <input type="hidden" id="editPlanId">
+                <div class="form-group">
+                    <label>Plan Name</label>
+                    <input type="text" id="editPlanName" required>
+                </div>
+                <div class="form-group">
+                    <label>Duration (hours)</label>
+                    <input type="number" id="editPlanDuration" required min="1">
+                </div>
+                <div class="form-group">
+                    <label>Price (KES)</label>
+                    <input type="number" id="editPlanPrice" required min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Data Limit (MB) - 0 for unlimited</label>
+                    <input type="number" id="editPlanDataLimit" required min="0">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editPlanStatus">
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Save Changes</button>
+                <button type="button" class="btn-primary" id="closeEditModalBtn" style="margin-top: 10px; background: #666;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         let token = null;
         let socket = null;
@@ -470,6 +601,11 @@
             e.preventDefault();
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
+
+            const submitBtn = document.querySelector('#loginForm button');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Loading...';
+            submitBtn.disabled = true;
 
             try {
                 const response = await fetch('/api/admin/login', {
@@ -489,6 +625,9 @@
                 }
             } catch (error) {
                 alert('Login failed: ' + error.message);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
         });
 
@@ -520,6 +659,14 @@
                 socket.on('payment_completed', (data) => {
                     showToast(`Payment completed: ${data.phoneNumber}`);
                     loadDashboardData();
+                });
+                socket.on('voucher_redeemed', (data) => {
+                    showToast(`Voucher redeemed: ${data.phoneNumber}`);
+                    if (currentPage === 'vouchers') loadVouchers();
+                });
+                socket.on('plans_updated', () => {
+                    showToast('Plans updated! Customer portal will refresh automatically');
+                    if (currentPage === 'plans') loadPlans();
                 });
             } catch(e) { console.log('WebSocket not available'); }
         }
@@ -646,28 +793,97 @@
             }
         }
 
-        function loadPlans() {
-            const plans = [
-                { plan_name: '2 Hours', duration_hours: 2, price_kes: 20, data_limit_mb: 500 },
-                { plan_name: '5 Hours', duration_hours: 5, price_kes: 40, data_limit_mb: 1200 },
-                { plan_name: '1 Day', duration_hours: 24, price_kes: 70, data_limit_mb: 3000 },
-                { plan_name: '3 Days', duration_hours: 72, price_kes: 150, data_limit_mb: 6000 },
-                { plan_name: '1 Week', duration_hours: 168, price_kes: 300, data_limit_mb: 15000 },
-                { plan_name: '1 Month', duration_hours: 720, price_kes: 1000, data_limit_mb: 50000 }
-            ];
-            document.getElementById('plansTableBody').innerHTML = plans.map(p => `
-                <tr>
-                    <td><strong>${p.plan_name}</strong></td>
-                    <td>${p.duration_hours} hours</td>
-                    <td>KSh ${p.price_kes}</td>
-                    <td>${p.data_limit_mb >= 1024 ? (p.data_limit_mb/1024).toFixed(1) + ' GB' : p.data_limit_mb + ' MB'}</td>
-                </tr>
-            `).join('');
-            
-            // Populate plan dropdown for voucher creation
-            const planSelect = document.getElementById('voucherPlan');
-            planSelect.innerHTML = plans.map(p => `<option value="${p.plan_name}">${p.plan_name} - KSh ${p.price_kes}</option>`).join('');
+        async function loadPlans() {
+            try {
+                const plans = await apiRequest('/api/admin/plans');
+                const tbody = document.getElementById('plansTableBody');
+                if (plans.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No plans found</td></tr>';
+                } else {
+                    tbody.innerHTML = plans.map(p => `
+                        <tr>
+                            <td><strong>${p.plan_name}</strong></td>
+                            <td>${p.duration_hours} hours</td>
+                            <td>KSh ${p.price_kes}</td>
+                            <td>${p.data_limit_mb === 0 ? 'Unlimited' : (p.data_limit_mb >= 1024 ? (p.data_limit_mb/1024).toFixed(1) + ' GB' : p.data_limit_mb + ' MB')}</td>
+                            <td><span class="status-badge ${p.is_active ? 'status-active' : 'status-inactive'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>
+                                <button class="btn-edit" onclick="editPlan(${p.id})">✏️ Edit</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+                
+                // Populate plan dropdown for voucher creation
+                const planSelect = document.getElementById('voucherPlan');
+                planSelect.innerHTML = plans.filter(p => p.is_active).map(p => `<option value="${p.plan_name}">${p.plan_name} - KSh ${p.price_kes}</option>`).join('');
+            } catch (error) {
+                console.error('Failed to load plans:', error);
+            }
         }
+
+        // Edit plan function
+        window.editPlan = async (planId) => {
+            try {
+                const plans = await apiRequest('/api/admin/plans');
+                const plan = plans.find(p => p.id === planId);
+                if (plan) {
+                    document.getElementById('editPlanId').value = plan.id;
+                    document.getElementById('editPlanName').value = plan.plan_name;
+                    document.getElementById('editPlanDuration').value = plan.duration_hours;
+                    document.getElementById('editPlanPrice').value = plan.price_kes;
+                    document.getElementById('editPlanDataLimit').value = plan.data_limit_mb;
+                    document.getElementById('editPlanStatus').value = plan.is_active ? '1' : '0';
+                    document.getElementById('editPlanModal').style.display = 'flex';
+                }
+            } catch (error) {
+                alert('Failed to load plan details');
+            }
+        };
+
+        // Save plan changes
+        document.getElementById('editPlanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const planData = {
+                id: parseInt(document.getElementById('editPlanId').value),
+                plan_name: document.getElementById('editPlanName').value,
+                duration_hours: parseInt(document.getElementById('editPlanDuration').value),
+                price_kes: parseInt(document.getElementById('editPlanPrice').value),
+                data_limit_mb: parseInt(document.getElementById('editPlanDataLimit').value),
+                is_active: document.getElementById('editPlanStatus').value === '1'
+            };
+            
+            const submitBtn = document.querySelector('#editPlanForm button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+            
+            try {
+                const result = await apiRequest('/api/admin/plans/update', {
+                    method: 'PUT',
+                    body: JSON.stringify(planData)
+                });
+                
+                if (result.success) {
+                    showToast('Plan updated successfully! Customer portal will refresh automatically');
+                    document.getElementById('editPlanModal').style.display = 'none';
+                    loadPlans();
+                    
+                    // Notify all connected clients (captive portal) to refresh plans
+                    if (socket) {
+                        socket.emit('plans_updated');
+                    }
+                } else {
+                    alert('Failed to update plan');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
 
         window.deactivateUser = async (userId) => {
             if (confirm('Deactivate this user?')) {
@@ -687,10 +903,19 @@
             document.getElementById('voucherModal').style.display = 'none';
         });
 
+        document.getElementById('closeEditModalBtn').addEventListener('click', () => {
+            document.getElementById('editPlanModal').style.display = 'none';
+        });
+
         document.getElementById('createVoucherForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const planName = document.getElementById('voucherPlan').value;
             const quantity = parseInt(document.getElementById('voucherQuantity').value);
+            
+            const submitBtn = document.querySelector('#createVoucherForm button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Generating...';
+            submitBtn.disabled = true;
             
             try {
                 const result = await apiRequest('/api/admin/vouchers', {
@@ -704,6 +929,9 @@
                 }
             } catch (error) {
                 alert('Failed to create vouchers');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
         });
 
@@ -718,7 +946,6 @@
                 document.getElementById(`page-${page}`).style.display = 'block';
                 document.getElementById('pageTitle').textContent = item.querySelector('span:last-child').textContent;
                 
-                // Load page data
                 if (page === 'users') loadUsers();
                 if (page === 'transactions') loadTransactions();
                 if (page === 'vouchers') loadVouchers();
@@ -732,8 +959,15 @@
             document.getElementById('sidebar').classList.toggle('open');
         });
 
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            const voucherModal = document.getElementById('voucherModal');
+            const editModal = document.getElementById('editPlanModal');
+            if (e.target === voucherModal) voucherModal.style.display = 'none';
+            if (e.target === editModal) editModal.style.display = 'none';
+        });
+
         // Initial load
-        loadPlans();
         setInterval(() => {
             if (token && currentPage === 'dashboard') loadDashboardData();
         }, 30000);
