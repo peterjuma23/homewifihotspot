@@ -397,13 +397,52 @@
             box-shadow: 0 8px 20px rgba(99,102,241,0.3);
         }
 
+        /* Status Display with WiFi Icon */
         .status-active, .status-inactive {
             text-align: center;
         }
 
-        .status-icon {
-            font-size: 3rem;
+        .wifi-icon {
+            font-size: 4rem;
             margin-bottom: 16px;
+            display: inline-block;
+        }
+
+        .wifi-icon.connected {
+            color: #10b981;
+            text-shadow: 0 0 20px rgba(16,185,129,0.5);
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        .wifi-icon.disconnected {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239,68,68,0.3);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; text-shadow: 0 0 10px rgba(16,185,129,0.3); }
+            50% { opacity: 1; text-shadow: 0 0 25px rgba(16,185,129,0.8); }
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .status-badge.connected {
+            background: rgba(16,185,129,0.2);
+            color: #10b981;
+            border: 1px solid rgba(16,185,129,0.3);
+        }
+
+        .status-badge.disconnected {
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.3);
         }
 
         .plan-info {
@@ -627,6 +666,7 @@
             .simple-card h3 { font-size: 1.3rem; }
             .payment-card { padding: 24px 20px; }
             .toast { white-space: normal; max-width: 90%; font-size: 0.85rem; }
+            .wifi-icon { font-size: 3rem; }
         }
         
         @media (max-width: 480px) {
@@ -754,10 +794,28 @@
             socket.on('payment_completed', (data) => {
                 showToast(`✅ ${data.planName} plan activated!`, 'success');
                 closePaymentModal();
+                // Auto-check status after payment
+                const lastPhone = localStorage.getItem('lastPhone');
+                if (lastPhone) {
+                    setTimeout(() => {
+                        document.getElementById('status-phone').value = lastPhone;
+                        checkStatus();
+                        document.querySelector('[data-tab="status"]').click();
+                    }, 1000);
+                }
             });
             
             socket.on('payment_failed', () => {
                 showToast(`❌ Payment failed`, 'error');
+            });
+            
+            socket.on('user_activated', (data) => {
+                console.log('User activated:', data);
+                const lastPhone = localStorage.getItem('lastPhone');
+                if (lastPhone && data.phoneNumber.includes(lastPhone.slice(-9))) {
+                    showToast(`✅ Your ${data.planName} plan is now active!`, 'success');
+                    setTimeout(() => checkStatus(), 1000);
+                }
             });
             
         } catch(e) { 
@@ -1002,21 +1060,40 @@
                 const data = await response.json();
                 
                 const statusDiv = document.getElementById('status-content');
-                if (data.isActive && new Date(data.expiresAt) > new Date()) {
+                
+                // Check if user has an active connection (not expired)
+                const isActive = data.isActive === true && new Date(data.expiresAt) > new Date();
+                const expiresAtDate = data.expiresAt ? new Date(data.expiresAt) : null;
+                const isExpired = expiresAtDate && expiresAtDate < new Date();
+                
+                if (isActive && !isExpired) {
                     const percentUsed = data.dataLimit && data.dataLimit > 0 ? ((data.bytesUsed || 0) / (data.dataLimit * 1024 * 1024) * 100) : 0;
                     statusDiv.innerHTML = `
                         <div class="status-active">
-                            <div class="status-icon">✅</div>
-                            <h3>Connected!</h3>
+                            <div class="wifi-icon connected">📶</div>
+                            <div class="status-badge connected">● CONNECTED</div>
+                            <h3 style="margin-top: 16px;">Connected!</h3>
                             <div class="plan-info">
-                                <div class="info-row"><span class="info-label">Plan</span><span class="info-value">${data.plan}</span></div>
-                                <div class="info-row"><span class="info-label">Expires</span><span class="info-value">${new Date(data.expiresAt).toLocaleString()}</span></div>
+                                <div class="info-row">
+                                    <span class="info-label">📡 Plan</span>
+                                    <span class="info-value">${data.plan || 'Active Plan'}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">⏰ Expires On</span>
+                                    <span class="info-value">${expiresAtDate.toLocaleString()}</span>
+                                </div>
                                 ${data.dataLimit && data.dataLimit > 0 ? `
-                                    <div class="info-row"><span class="info-label">Data Used</span><span class="info-value">${((data.bytesUsed || 0) / 1024 / 1024).toFixed(1)} MB / ${data.dataLimit} MB</span></div>
-                                    <div class="progress-bar"><div class="progress-fill" style="width: ${Math.min(percentUsed, 100)}%"></div></div>
-                                ` : '<div class="info-row"><span class="info-label">Data</span><span class="info-value">Unlimited</span></div>'}
+                                    <div class="info-row">
+                                        <span class="info-label">📊 Data Used</span>
+                                        <span class="info-value">${((data.bytesUsed || 0) / 1024 / 1024).toFixed(1)} MB / ${data.dataLimit} MB</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: ${Math.min(percentUsed, 100)}%"></div>
+                                    </div>
+                                ` : '<div class="info-row"><span class="info-label">📊 Data</span><span class="info-value">Unlimited</span></div>'}
                             </div>
-                            <button class="btn-secondary" id="refresh-status">Check Again</button>
+                            <p style="color: #10b981; font-size: 0.8rem; margin-top: 8px;">✓ You are online and connected</p>
+                            <button class="btn-secondary" id="refresh-status" style="margin-top: 16px;">🔄 Refresh Status</button>
                         </div>
                     `;
                     document.getElementById('refresh-status')?.addEventListener('click', () => {
@@ -1026,12 +1103,13 @@
                 } else {
                     statusDiv.innerHTML = `
                         <div class="status-inactive">
-                            <div class="status-icon">⚠️</div>
-                            <h3>No Active Connection</h3>
-                            <p style="color: rgba(255,255,255,0.6); margin: 16px 0;">Purchase a plan or redeem a voucher to get connected.</p>
+                            <div class="wifi-icon disconnected">📶</div>
+                            <div class="status-badge disconnected">● DISCONNECTED</div>
+                            <h3 style="margin-top: 16px;">No Active Connection</h3>
+                            <p style="color: rgba(255,255,255,0.6); margin: 16px 0;">You are not connected to FastConnect Internet.<br>Purchase a plan or redeem a voucher to get online.</p>
                             <div class="action-buttons">
-                                <button class="btn-secondary" id="try-again">Try Again</button>
-                                <button class="btn-primary" id="buy-now">Buy Now</button>
+                                <button class="btn-secondary" id="try-again">🔄 Try Again</button>
+                                <button class="btn-primary" id="buy-now">📱 Buy Now</button>
                             </div>
                         </div>
                     `;
@@ -1044,7 +1122,8 @@
                     });
                 }
             } catch (error) {
-                showToast('Error checking status', 'error');
+                console.error('Status check error:', error);
+                showToast('Error checking status. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
             }
@@ -1068,7 +1147,7 @@
             });
         });
 
-        // FIXED: Added event listener for the Pay Now button
+        // Payment event listeners
         document.getElementById('confirmPayBtn').addEventListener('click', processPayment);
         document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
         
