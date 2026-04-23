@@ -465,7 +465,7 @@
                             <tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="6">Loading...</td></tr>
+                            <td><td colspan="6">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -479,7 +479,7 @@
                     <h3 style="margin-bottom: 15px;">Vouchers</h3>
                     <table id="vouchersTable">
                         <thead>
-                            <tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr>
+                            <td><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr>
                         </thead>
                         <tbody>
                             <tr><td colspan="6">Loading...</td></tr>
@@ -695,7 +695,20 @@
                     showToast('Plans have been updated!');
                     if (currentPage === 'plans') loadPlans();
                 });
-            } catch(e) { console.log('WebSocket not available'); }
+                // NEW: Listen for user deactivation events
+                socket.on('user_deactivated', (data) => {
+                    showToast(`User has been deactivated`);
+                    if (currentPage === 'dashboard') loadDashboardData();
+                    if (currentPage === 'users') loadUsers();
+                });
+                socket.on('voucher_redeemed', (data) => {
+                    showToast(`Voucher redeemed: ${data.phoneNumber}`);
+                    if (currentPage === 'vouchers') loadVouchers();
+                    if (currentPage === 'dashboard') loadDashboardData();
+                });
+            } catch(e) { 
+                console.log('WebSocket not available'); 
+            }
         }
 
         function showToast(message) {
@@ -958,20 +971,15 @@
             }
         });
 
-        // Navigation - THIS IS THE FIX
+        // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function() {
                 const page = this.getAttribute('data-page');
                 currentPage = page;
                 
-                // Update active state
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 this.classList.add('active');
-                
-                // Show the selected page
                 showPage(page);
-                
-                // Close mobile menu after selection
                 closeMobileMenu();
             });
         });

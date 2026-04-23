@@ -71,7 +71,6 @@ async function initDatabase() {
 
 async function createTables() {
     try {
-        // Create users table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -93,7 +92,6 @@ async function createTables() {
         `);
         console.log('✅ Users table ready');
         
-        // Create transactions table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -115,7 +113,6 @@ async function createTables() {
         `);
         console.log('✅ Transactions table ready');
         
-        // Create vouchers table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS vouchers (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -136,7 +133,6 @@ async function createTables() {
         `);
         console.log('✅ Vouchers table ready');
         
-        // Create admins table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS admins (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -149,7 +145,6 @@ async function createTables() {
         `);
         console.log('✅ Admins table ready');
         
-        // Create plans table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS plans (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -165,7 +160,6 @@ async function createTables() {
         `);
         console.log('✅ Plans table ready');
         
-        // Insert default admin (password: Admin@FastConnect2024!)
         const hashedPassword = await bcrypt.hash('Admin@FastConnect2024!', 10);
         await pool.query(
             `INSERT IGNORE INTO admins (username, password_hash, role) VALUES (?, ?, ?)`,
@@ -173,7 +167,6 @@ async function createTables() {
         );
         console.log('✅ Default admin user ready');
         
-        // Insert default plans
         const defaultPlans = [
             ['2 Hours', 2, 10, 500, 2],
             ['4 Hours', 4, 15, 1200, 2],
@@ -193,20 +186,12 @@ async function createTables() {
         }
         console.log('✅ Default plans ready');
         
-        // Insert demo voucher
         await pool.query(
             `INSERT IGNORE INTO vouchers (voucher_code, plan_name, plan_duration_hours, data_limit_mb, amount, created_by) 
              VALUES (?, ?, ?, ?, ?, ?)`,
             ['FC-DEMO-2024', '24 Hours', 24, 5000, 40, 'system']
         );
         console.log('✅ Demo voucher ready');
-        
-        // Update expired users (simple update instead of procedure)
-        await pool.query(`
-            UPDATE users 
-            SET is_active = FALSE 
-            WHERE expires_at < NOW() AND is_active = TRUE
-        `);
         
         console.log('✅ Database setup complete!');
     } catch (error) {
@@ -569,6 +554,7 @@ app.post('/api/check-status', async (req, res) => {
             const [rows] = await pool.query(query, params);
             user = rows[0];
             
+            // Check if expired and update if needed
             if (user && user.expires_at && new Date(user.expires_at) < new Date()) {
                 await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
                 user.is_active = false;
@@ -585,7 +571,10 @@ app.post('/api/check-status', async (req, res) => {
             }
         }
         
-        if (user && user.is_active && new Date(user.expires_at) > new Date()) {
+        // Check if user is active AND not expired
+        const isActive = user && user.is_active === true && user.expires_at && new Date(user.expires_at) > new Date();
+        
+        if (isActive) {
             res.json({
                 success: true,
                 isActive: true,
@@ -643,26 +632,41 @@ app.post('/api/admin/logout', (req, res) => {
     res.json({ success: true });
 });
 
+// FIXED: Get admin dashboard stats - only count truly active users
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
         
         if (dbAvailable && pool) {
-            const [activeCount] = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_active = TRUE AND expires_at > NOW()');
+            // Only count users who are active AND not expired
+            const [activeCount] = await pool.query(
+                'SELECT COUNT(*) as count FROM users WHERE is_active = TRUE AND expires_at > NOW()'
+            );
             stats.activeUsers = activeCount[0].count;
+            
+            // Total revenue from completed transactions
             const [revenue] = await pool.query('SELECT SUM(amount) as total FROM transactions WHERE status = "completed"');
             stats.totalRevenue = revenue[0].total || 0;
-            const [todayRevenue] = await pool.query('SELECT SUM(amount) as total FROM transactions WHERE status = "completed" AND DATE(completed_at) = CURDATE()');
+            
+            // Today's revenue from completed transactions
+            const [todayRevenue] = await pool.query(
+                'SELECT SUM(amount) as total FROM transactions WHERE status = "completed" AND DATE(completed_at) = CURDATE()'
+            );
             stats.todayRevenue = todayRevenue[0].total || 0;
+            
+            // Total completed transactions
             const [txnCount] = await pool.query('SELECT COUNT(*) as count FROM transactions WHERE status = "completed"');
             stats.totalTransactions = txnCount[0].count;
         } else {
-            stats.activeUsers = memoryStore.users.filter(u => u.is_active && new Date(u.expires_at) > new Date()).length;
+            // In-memory stats
+            const now = new Date();
+            stats.activeUsers = memoryStore.users.filter(u => u.is_active === true && new Date(u.expires_at) > now).length;
             const completedTxns = memoryStore.transactions.filter(t => t.status === 'completed');
             stats.totalRevenue = completedTxns.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const today = new Date().toDateString();
             stats.todayRevenue = completedTxns.filter(t => {
-                const today = new Date().toDateString();
-                return new Date(t.completed_at || t.created_at).toDateString() === today;
+                const tDate = new Date(t.completed_at || t.created_at);
+                return tDate.toDateString() === today;
             }).reduce((sum, t) => sum + (t.amount || 0), 0);
             stats.totalTransactions = completedTxns.length;
         }
@@ -673,17 +677,20 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     }
 });
 
+// FIXED: Get only active users (is_active = true AND not expired)
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
             const [users] = await pool.query(
                 `SELECT id, phone_number, name, plan_name, data_limit_mb, bytes_used, expires_at, is_active, created_at, last_seen 
-                 FROM users WHERE is_active = TRUE OR expires_at > NOW()
+                 FROM users 
+                 WHERE is_active = TRUE AND expires_at > NOW()
                  ORDER BY created_at DESC`
             );
             res.json(users);
         } else {
-            const activeUsers = memoryStore.users.filter(u => u.is_active || new Date(u.expires_at) > new Date());
+            const now = new Date();
+            const activeUsers = memoryStore.users.filter(u => u.is_active === true && new Date(u.expires_at) > now);
             res.json(activeUsers);
         }
     } catch (error) {
@@ -831,6 +838,7 @@ app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
+// FIXED: Deactivate user - properly sets is_active to false
 app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -839,6 +847,10 @@ app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) 
             const user = memoryStore.users.find(u => u.id == req.params.id);
             if (user) user.is_active = false;
         }
+        
+        // Broadcast to all connected clients that user was deactivated
+        io.emit('user_deactivated', { userId: req.params.id });
+        
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
