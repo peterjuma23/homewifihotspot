@@ -37,7 +37,6 @@ let pool;
 
 async function initDatabase() {
     try {
-        // Get database configuration from environment variables
         const dbConfig = {
             host: process.env.DB_HOST,
             port: parseInt(process.env.DB_PORT) || 3306,
@@ -49,22 +48,11 @@ async function initDatabase() {
             queueLimit: 0,
             enableKeepAlive: true,
             keepAliveInitialDelay: 10000,
-            connectTimeout: 10000
+            connectTimeout: 10000,
+            ssl: { rejectUnauthorized: false }
         };
         
-        // Add SSL for Aiven (always required)
-        dbConfig.ssl = {
-            rejectUnauthorized: false
-        };
-        
-        console.log('🔌 Connecting to database with config:', {
-            host: dbConfig.host,
-            port: dbConfig.port,
-            user: dbConfig.user,
-            database: dbConfig.database,
-            ssl: true
-        });
-        
+        console.log('🔌 Connecting to database...');
         pool = mysql.createPool(dbConfig);
         
         const connection = await pool.getConnection();
@@ -72,7 +60,6 @@ async function initDatabase() {
         connection.release();
         
         await createTables();
-        await pool.execute('CALL cleanup_expired_users()');
         
         return true;
     } catch (error) {
@@ -84,7 +71,8 @@ async function initDatabase() {
 
 async function createTables() {
     try {
-        await pool.execute(`
+        // Create users table
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 phone_number VARCHAR(15) NOT NULL UNIQUE,
@@ -103,8 +91,10 @@ async function createTables() {
                 INDEX idx_expires (expires_at)
             )
         `);
+        console.log('✅ Users table ready');
         
-        await pool.execute(`
+        // Create transactions table
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 transaction_id VARCHAR(100) UNIQUE NOT NULL,
@@ -123,8 +113,10 @@ async function createTables() {
                 INDEX idx_created (created_at)
             )
         `);
+        console.log('✅ Transactions table ready');
         
-        await pool.execute(`
+        // Create vouchers table
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS vouchers (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 voucher_code VARCHAR(50) UNIQUE NOT NULL,
@@ -142,8 +134,10 @@ async function createTables() {
                 INDEX idx_used (is_used)
             )
         `);
+        console.log('✅ Vouchers table ready');
         
-        await pool.execute(`
+        // Create admins table
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS admins (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
@@ -153,8 +147,10 @@ async function createTables() {
                 last_login DATETIME
             )
         `);
+        console.log('✅ Admins table ready');
         
-        await pool.execute(`
+        // Create plans table
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS plans (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 plan_name VARCHAR(50) UNIQUE NOT NULL,
@@ -167,13 +163,17 @@ async function createTables() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        console.log('✅ Plans table ready');
         
+        // Insert default admin (password: Admin@FastConnect2024!)
         const hashedPassword = await bcrypt.hash('Admin@FastConnect2024!', 10);
-        await pool.execute(
+        await pool.query(
             `INSERT IGNORE INTO admins (username, password_hash, role) VALUES (?, ?, ?)`,
             ['admin', hashedPassword, 'superadmin']
         );
+        console.log('✅ Default admin user ready');
         
+        // Insert default plans
         const defaultPlans = [
             ['2 Hours', 2, 10, 500, 2],
             ['4 Hours', 4, 15, 1200, 2],
@@ -185,29 +185,30 @@ async function createTables() {
         ];
         
         for (const plan of defaultPlans) {
-            await pool.execute(
+            await pool.query(
                 `INSERT IGNORE INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active) 
                  VALUES (?, ?, ?, ?, ?, 1)`,
                 plan
             );
         }
+        console.log('✅ Default plans ready');
         
-        await pool.execute(
+        // Insert demo voucher
+        await pool.query(
             `INSERT IGNORE INTO vouchers (voucher_code, plan_name, plan_duration_hours, data_limit_mb, amount, created_by) 
              VALUES (?, ?, ?, ?, ?, ?)`,
             ['FC-DEMO-2024', '24 Hours', 24, 5000, 40, 'system']
         );
+        console.log('✅ Demo voucher ready');
         
-        await pool.execute(`
-            CREATE PROCEDURE IF NOT EXISTS cleanup_expired_users()
-            BEGIN
-                UPDATE users 
-                SET is_active = FALSE 
-                WHERE expires_at < NOW() AND is_active = TRUE;
-            END
+        // Update expired users (simple update instead of procedure)
+        await pool.query(`
+            UPDATE users 
+            SET is_active = FALSE 
+            WHERE expires_at < NOW() AND is_active = TRUE
         `);
         
-        console.log('✅ Database tables created successfully');
+        console.log('✅ Database setup complete!');
     } catch (error) {
         console.error('❌ Error creating tables:', error.message);
     }
@@ -270,7 +271,7 @@ const authenticateAdmin = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         if (dbAvailable && pool) {
-            const [rows] = await pool.execute(
+            const [rows] = await pool.query(
                 'SELECT id, username, role FROM admins WHERE id = ? AND username = ?',
                 [decoded.id, decoded.username]
             );
@@ -317,11 +318,11 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
-            await connection.execute(
+            await connection.query(
                 `UPDATE transactions SET status = 'completed', completed_at = NOW(), mpesa_receipt = ? WHERE transaction_id = ?`,
                 [mpesaReceipt, transactionId]
             );
-            await connection.execute(
+            await connection.query(
                 `INSERT INTO users (phone_number, plan_name, data_limit_mb, bytes_used, expires_at, is_active, last_seen)
                  VALUES (?, ?, ?, 0, ?, TRUE, NOW())
                  ON DUPLICATE KEY UPDATE
@@ -374,7 +375,7 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
 
 async function updateTransactionStatus(transactionId, status) {
     if (dbAvailable && pool) {
-        await pool.execute('UPDATE transactions SET status = ? WHERE transaction_id = ?', [status, transactionId]);
+        await pool.query('UPDATE transactions SET status = ? WHERE transaction_id = ?', [status, transactionId]);
     } else {
         const txn = memoryStore.transactions.find(t => t.transaction_id === transactionId);
         if (txn) txn.status = status;
@@ -383,7 +384,7 @@ async function updateTransactionStatus(transactionId, status) {
 
 async function getPlanDetails(planName) {
     if (dbAvailable && pool) {
-        const [rows] = await pool.execute('SELECT *, speed_mbps FROM plans WHERE plan_name = ? AND is_active = TRUE', [planName]);
+        const [rows] = await pool.query('SELECT *, speed_mbps FROM plans WHERE plan_name = ? AND is_active = TRUE', [planName]);
         return rows[0];
     } else {
         return memoryStore.plans.find(p => p.plan_name === planName && p.is_active);
@@ -392,7 +393,7 @@ async function getPlanDetails(planName) {
 
 async function getAllPlans() {
     if (dbAvailable && pool) {
-        const [rows] = await pool.execute('SELECT *, speed_mbps FROM plans WHERE is_active = TRUE ORDER BY duration_hours');
+        const [rows] = await pool.query('SELECT *, speed_mbps FROM plans WHERE is_active = TRUE ORDER BY duration_hours');
         return rows;
     } else {
         return memoryStore.plans.filter(p => p.is_active);
@@ -429,7 +430,7 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
     const plan = await getPlanDetails(planName);
     
     if (dbAvailable && pool) {
-        await pool.execute(
+        await pool.query(
             `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, status)
              VALUES (?, ?, ?, ?, ?, 'pending')`,
             [transactionId, formattedPhone, amount, planName, plan?.duration_hours]
@@ -462,27 +463,27 @@ app.post('/api/voucher/redeem', async (req, res) => {
         let voucher, plan;
         
         if (dbAvailable && pool) {
-            const [vouchers] = await pool.execute('SELECT * FROM vouchers WHERE voucher_code = ? AND is_used = FALSE', [voucherCode.toUpperCase()]);
+            const [vouchers] = await pool.query('SELECT * FROM vouchers WHERE voucher_code = ? AND is_used = FALSE', [voucherCode.toUpperCase()]);
             voucher = vouchers[0];
             
             if (!voucher) {
                 return res.status(404).json({ error: 'Invalid or already used voucher code' });
             }
             
-            const [plans] = await pool.execute('SELECT * FROM plans WHERE plan_name = ?', [voucher.plan_name]);
+            const [plans] = await pool.query('SELECT * FROM plans WHERE plan_name = ?', [voucher.plan_name]);
             plan = plans[0];
             
-            await pool.execute('UPDATE vouchers SET is_used = TRUE, used_by_phone = ?, used_at = NOW() WHERE voucher_code = ?', [phoneNumber, voucherCode.toUpperCase()]);
+            await pool.query('UPDATE vouchers SET is_used = TRUE, used_by_phone = ?, used_at = NOW() WHERE voucher_code = ?', [phoneNumber, voucherCode.toUpperCase()]);
             
             const transactionId = generateTransactionId();
-            await pool.execute(
+            await pool.query(
                 `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, payment_method, voucher_code, status, completed_at)
                  VALUES (?, ?, ?, ?, ?, 'voucher', ?, 'completed', NOW())`,
                 [transactionId, phoneNumber, voucher.amount, voucher.plan_name, voucher.plan_duration_hours, voucherCode]
             );
             
             const expiresAt = new Date(Date.now() + voucher.plan_duration_hours * 60 * 60 * 1000);
-            await pool.execute(
+            await pool.query(
                 `INSERT INTO users (phone_number, name, plan_name, data_limit_mb, bytes_used, expires_at, is_active, last_seen)
                  VALUES (?, ?, ?, ?, 0, ?, TRUE, NOW())
                  ON DUPLICATE KEY UPDATE
@@ -565,16 +566,16 @@ app.post('/api/check-status', async (req, res) => {
                 query += 'mac_address = ?';
                 params.push(macAddress);
             }
-            const [rows] = await pool.execute(query, params);
+            const [rows] = await pool.query(query, params);
             user = rows[0];
             
             if (user && user.expires_at && new Date(user.expires_at) < new Date()) {
-                await pool.execute('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
+                await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
                 user.is_active = false;
             }
             
             if (user && macAddress && !user.mac_address) {
-                await pool.execute('UPDATE users SET mac_address = ?, last_seen = NOW() WHERE id = ?', [macAddress, user.id]);
+                await pool.query('UPDATE users SET mac_address = ?, last_seen = NOW() WHERE id = ?', [macAddress, user.id]);
                 user.mac_address = macAddress;
             }
         } else {
@@ -614,11 +615,11 @@ app.post('/api/admin/login', async (req, res) => {
         let isValid = false;
         
         if (dbAvailable && pool) {
-            const [rows] = await pool.execute('SELECT * FROM admins WHERE username = ?', [username]);
+            const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', [username]);
             if (rows.length > 0) {
                 isValid = await bcrypt.compare(password, rows[0].password_hash);
                 if (isValid) {
-                    await pool.execute('UPDATE admins SET last_login = NOW() WHERE id = ?', [rows[0].id]);
+                    await pool.query('UPDATE admins SET last_login = NOW() WHERE id = ?', [rows[0].id]);
                 }
             }
         } else {
@@ -647,13 +648,13 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
         
         if (dbAvailable && pool) {
-            const [activeCount] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE is_active = TRUE AND expires_at > NOW()');
+            const [activeCount] = await pool.query('SELECT COUNT(*) as count FROM users WHERE is_active = TRUE AND expires_at > NOW()');
             stats.activeUsers = activeCount[0].count;
-            const [revenue] = await pool.execute('SELECT SUM(amount) as total FROM transactions WHERE status = "completed"');
+            const [revenue] = await pool.query('SELECT SUM(amount) as total FROM transactions WHERE status = "completed"');
             stats.totalRevenue = revenue[0].total || 0;
-            const [todayRevenue] = await pool.execute('SELECT SUM(amount) as total FROM transactions WHERE status = "completed" AND DATE(completed_at) = CURDATE()');
+            const [todayRevenue] = await pool.query('SELECT SUM(amount) as total FROM transactions WHERE status = "completed" AND DATE(completed_at) = CURDATE()');
             stats.todayRevenue = todayRevenue[0].total || 0;
-            const [txnCount] = await pool.execute('SELECT COUNT(*) as count FROM transactions WHERE status = "completed"');
+            const [txnCount] = await pool.query('SELECT COUNT(*) as count FROM transactions WHERE status = "completed"');
             stats.totalTransactions = txnCount[0].count;
         } else {
             stats.activeUsers = memoryStore.users.filter(u => u.is_active && new Date(u.expires_at) > new Date()).length;
@@ -675,7 +676,7 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
-            const [users] = await pool.execute(
+            const [users] = await pool.query(
                 `SELECT id, phone_number, name, plan_name, data_limit_mb, bytes_used, expires_at, is_active, created_at, last_seen 
                  FROM users WHERE is_active = TRUE OR expires_at > NOW()
                  ORDER BY created_at DESC`
@@ -693,7 +694,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
-            const [transactions] = await pool.execute(`SELECT * FROM transactions ORDER BY created_at DESC LIMIT 500`);
+            const [transactions] = await pool.query(`SELECT * FROM transactions ORDER BY created_at DESC LIMIT 500`);
             res.json(transactions);
         } else {
             res.json(memoryStore.transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
@@ -706,7 +707,7 @@ app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/plans', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
-            const [plans] = await pool.execute('SELECT * FROM plans ORDER BY duration_hours');
+            const [plans] = await pool.query('SELECT * FROM plans ORDER BY duration_hours');
             res.json(plans);
         } else {
             res.json(memoryStore.plans);
@@ -721,7 +722,7 @@ app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
     
     try {
         if (dbAvailable && pool) {
-            await pool.execute(
+            await pool.query(
                 `UPDATE plans SET plan_name = ?, duration_hours = ?, price_kes = ?, data_limit_mb = ?, speed_mbps = ?, is_active = ? WHERE id = ?`,
                 [plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active, id]
             );
@@ -752,7 +753,7 @@ app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
     
     try {
         if (dbAvailable && pool) {
-            const [result] = await pool.execute(
+            const [result] = await pool.query(
                 `INSERT INTO plans (plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active) VALUES (?, ?, ?, ?, ?, 1)`,
                 [plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps || 2]
             );
@@ -792,7 +793,7 @@ app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
             vouchers.push(code);
             
             if (dbAvailable && pool) {
-                await pool.execute(
+                await pool.query(
                     `INSERT INTO vouchers (voucher_code, plan_name, plan_duration_hours, data_limit_mb, amount, created_by)
                      VALUES (?, ?, ?, ?, ?, ?)`,
                     [code, plan.plan_name, plan.duration_hours, plan.data_limit_mb, plan.price_kes, req.admin.username]
@@ -820,7 +821,7 @@ app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
 app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
-            const [vouchers] = await pool.execute('SELECT * FROM vouchers ORDER BY created_at DESC');
+            const [vouchers] = await pool.query('SELECT * FROM vouchers ORDER BY created_at DESC');
             res.json(vouchers);
         } else {
             res.json(memoryStore.vouchers);
@@ -833,7 +834,7 @@ app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
 app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
-            await pool.execute('UPDATE users SET is_active = FALSE WHERE id = ?', [req.params.id]);
+            await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [req.params.id]);
         } else {
             const user = memoryStore.users.find(u => u.id == req.params.id);
             if (user) user.is_active = false;
