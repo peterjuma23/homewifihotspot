@@ -65,10 +65,6 @@
             transform: translateX(0);
         }
 
-        .sidebar.closed {
-            transform: translateX(-100%);
-        }
-
         .sidebar-header {
             padding: 25px;
             text-align: center;
@@ -312,11 +308,6 @@
             font-size: 1rem;
         }
 
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
         .loading {
             display: inline-block;
             width: 20px;
@@ -407,11 +398,21 @@
                 <p style="font-size: 0.8rem; opacity: 0.7;">Admin Panel</p>
             </div>
             <div class="sidebar-nav">
-                <div class="nav-item active" data-page="dashboard"><span>📊</span> <span>Dashboard</span></div>
-                <div class="nav-item" data-page="users"><span>👥</span> <span>Active Users</span></div>
-                <div class="nav-item" data-page="transactions"><span>💰</span> <span>Transactions</span></div>
-                <div class="nav-item" data-page="vouchers"><span>🎟️</span> <span>Vouchers</span></div>
-                <div class="nav-item" data-page="plans"><span>📡</span> <span>Manage Plans</span></div>
+                <div class="nav-item active" data-page="dashboard">
+                    <span>📊</span> <span>Dashboard</span>
+                </div>
+                <div class="nav-item" data-page="users">
+                    <span>👥</span> <span>Active Users</span>
+                </div>
+                <div class="nav-item" data-page="transactions">
+                    <span>💰</span> <span>Transactions</span>
+                </div>
+                <div class="nav-item" data-page="vouchers">
+                    <span>🎟️</span> <span>Vouchers</span>
+                </div>
+                <div class="nav-item" data-page="plans">
+                    <span>📡</span> <span>Manage Plans</span>
+                </div>
             </div>
         </div>
 
@@ -432,129 +433,148 @@
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Recent Transactions</h3>
                     <table id="recentTransactionsTable">
-                        <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
-                        <tbody><tr><td colspan="5">Loading...<\/td><\/tr><\/tbody>
-                    <\/table>
-                <\/div>
-            <\/div>
+                        <thead>
+                            <tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div id="page-users" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Active Users</h3>
                     <table id="usersTable">
-                        <thead><tr><th>Phone<\/th><th>Name<\/th><th>Plan<\/th><th>Expires<\/th><th>Data Used<\/th><th>Action<\/th><\/tr><\/thead>
-                        <tbody><tr><td colspan="6">Loading...<\/td><\/tr><\/tbody>
-                    <\/table>
-                <\/div>
-            <\/div>
+                        <thead>
+                            <tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div id="page-transactions" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">All Transactions</h3>
                     <table id="transactionsTable">
-                        <thead><tr><th>Date<\/th><th>Phone<\/th><th>Plan<\/th><th>Amount<\/th><th>Method<\/th><th>Status<\/th><\/tr><\/thead>
-                        <tbody><td><td colspan="6">Loading...<\/td><\/tr><\/tbody>
-                    <\/table>
-                <\/div>
-            <\/div>
+                        <thead>
+                            <tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div id="page-vouchers" style="display: none;">
                 <div style="margin-bottom: 20px;">
-                    <button class="btn-primary" id="createVoucherBtn">+ Create New Voucher<\/button>
-                <\/div>
+                    <button class="btn-primary" id="createVoucherBtn">+ Create New Voucher</button>
+                </div>
                 <div class="table-container">
-                    <h3 style="margin-bottom: 15px;">Vouchers<\/h3>
+                    <h3 style="margin-bottom: 15px;">Vouchers</h3>
                     <table id="vouchersTable">
-                        <thead><tr><th>Code<\/th><th>Plan<\/th><th>Amount<\/th><th>Status<\/th><th>Used By<\/th><th>Created<\/th><\/tr><\/thead>
-                        <tbody><tr><td colspan="6">Loading...<\/td><\/tr><\/tbody>
-                    <\/table>
-                <\/div>
-            <\/div>
+                        <thead>
+                            <tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
             <div id="page-plans" style="display: none;">
                 <div class="table-container">
-                    <h3 style="margin-bottom: 15px;">Internet Plans<\/h3>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Edit plans - changes reflect immediately on customer portal<\/p>
+                    <h3 style="margin-bottom: 15px;">Internet Plans</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Edit plans - changes reflect immediately on customer portal</p>
                     <table id="plansTable">
                         <thead>
                             <tr>
-                                <th>Plan Name<\/th>
-                                <th>Duration<\/th>
-                                <th>Price (KES)<\/th>
-                                <th>Data Limit<\/th>
-                                <th>Speed (Mbps)<\/th>
-                                <th>Status<\/th>
-                                <th>Actions<\/th>
-                            <\/tr>
-                        <\/thead>
-                        <tbody id="plansTableBody"><tr><td colspan="7">Loading...<\/td><\/tr><\/tbody>
-                    <\/table>
-                <\/div>
-            <\/div>
-        <\/div>
-    <\/div>
+                                <th>Plan Name</th>
+                                <th>Duration</th>
+                                <th>Price (KES)</th>
+                                <th>Data Limit</th>
+                                <th>Speed (Mbps)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plansTableBody">
+                            <tr><td colspan="7">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="voucherModal" class="modal">
         <div class="modal-content">
-            <h3>Create Voucher<\/h3>
+            <h3>Create Voucher</h3>
             <form id="createVoucherForm">
                 <div class="form-group">
-                    <label>Plan<\/label>
-                    <select id="voucherPlan" required><\/select>
-                <\/div>
+                    <label>Plan</label>
+                    <select id="voucherPlan" required></select>
+                </div>
                 <div class="form-group">
-                    <label>Quantity<\/label>
+                    <label>Quantity</label>
                     <input type="number" id="voucherQuantity" value="1" min="1" max="100" required>
-                <\/div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Generate Vouchers<\/button>
-                <button type="button" class="btn-primary" id="closeModalBtn" style="margin-top: 10px; background: #666;">Cancel<\/button>
-            <\/form>
-        <\/div>
-    <\/div>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Generate Vouchers</button>
+                <button type="button" class="btn-primary" id="closeModalBtn" style="margin-top: 10px; background: #666;">Cancel</button>
+            </form>
+        </div>
+    </div>
 
     <div id="editPlanModal" class="modal">
         <div class="modal-content">
-            <h3>Edit Plan<\/h3>
+            <h3>Edit Plan</h3>
             <form id="editPlanForm">
                 <input type="hidden" id="editPlanId">
                 <div class="form-group">
-                    <label>Plan Name<\/label>
+                    <label>Plan Name</label>
                     <input type="text" id="editPlanName" required>
-                <\/div>
+                </div>
                 <div class="form-group">
-                    <label>Duration (hours)<\/label>
+                    <label>Duration (hours)</label>
                     <input type="number" id="editPlanDuration" required min="1">
-                <\/div>
+                </div>
                 <div class="form-group">
-                    <label>Price (KES)<\/label>
+                    <label>Price (KES)</label>
                     <input type="number" id="editPlanPrice" required min="0" step="1">
-                <\/div>
+                </div>
                 <div class="form-group">
-                    <label>Data Limit (MB) - 0 for unlimited<\/label>
+                    <label>Data Limit (MB) - 0 for unlimited</label>
                     <input type="number" id="editPlanDataLimit" required min="0">
-                <\/div>
+                </div>
                 <div class="form-group">
-                    <label>Speed (Mbps)<\/label>
+                    <label>Speed (Mbps)</label>
                     <input type="number" id="editPlanSpeed" required min="1" max="100" step="1">
-                <\/div>
+                </div>
                 <div class="form-group">
-                    <label>Status<\/label>
+                    <label>Status</label>
                     <select id="editPlanStatus">
-                        <option value="1">Active<\/option>
-                        <option value="0">Inactive<\/option>
-                    <\/select>
-                <\/div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Save Changes<\/button>
-                <button type="button" class="btn-primary" id="closeEditModalBtn" style="margin-top: 10px; background: #666;">Cancel<\/button>
-            <\/form>
-        <\/div>
-    <\/div>
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Save Changes</button>
+                <button type="button" class="btn-primary" id="closeEditModalBtn" style="margin-top: 10px; background: #666;">Cancel</button>
+            </form>
+        </div>
+    </div>
 
     <script>
         let token = null;
         let socket = null;
         let currentPage = 'dashboard';
 
+        // Mobile menu functions
         function openMobileMenu() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -571,12 +591,45 @@
             document.body.style.overflow = '';
         }
 
+        // Show specific page
+        function showPage(pageName) {
+            // Hide all pages
+            document.getElementById('page-dashboard').style.display = 'none';
+            document.getElementById('page-users').style.display = 'none';
+            document.getElementById('page-transactions').style.display = 'none';
+            document.getElementById('page-vouchers').style.display = 'none';
+            document.getElementById('page-plans').style.display = 'none';
+            
+            // Show selected page
+            document.getElementById(`page-${pageName}`).style.display = 'block';
+            
+            // Update page title
+            const pageTitles = {
+                'dashboard': 'Dashboard',
+                'users': 'Active Users',
+                'transactions': 'Transactions',
+                'vouchers': 'Vouchers',
+                'plans': 'Manage Plans'
+            };
+            document.getElementById('pageTitle').textContent = pageTitles[pageName] || 'Dashboard';
+            
+            // Load page data
+            if (pageName === 'users') loadUsers();
+            if (pageName === 'transactions') loadTransactions();
+            if (pageName === 'vouchers') loadVouchers();
+            if (pageName === 'plans') loadPlans();
+            if (pageName === 'dashboard') loadDashboardData();
+        }
+
+        // Check if already logged in
         if (localStorage.getItem('adminToken')) {
             token = localStorage.getItem('adminToken');
             showDashboard();
             loadDashboardData();
+            initWebSocket();
         }
 
+        // Login handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('loginUsername').value;
@@ -611,6 +664,7 @@
             }
         });
 
+        // Logout handler
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await fetch('/api/admin/logout', { method: 'POST' });
             localStorage.removeItem('adminToken');
@@ -630,12 +684,16 @@
                 socket.on('connect', () => socket.emit('admin_join'));
                 socket.on('user_activated', (data) => {
                     showToast(`New user activated: ${data.phoneNumber} - ${data.planName}`);
-                    loadDashboardData();
+                    if (currentPage === 'dashboard') loadDashboardData();
                     if (currentPage === 'users') loadUsers();
                 });
                 socket.on('payment_completed', (data) => {
                     showToast(`Payment completed: ${data.phoneNumber}`);
-                    loadDashboardData();
+                    if (currentPage === 'dashboard') loadDashboardData();
+                });
+                socket.on('plans_updated', () => {
+                    showToast('Plans have been updated!');
+                    if (currentPage === 'plans') loadPlans();
                 });
             } catch(e) { console.log('WebSocket not available'); }
         }
@@ -675,7 +733,7 @@
 
                 const transactions = await apiRequest('/api/admin/transactions');
                 const tbody = document.querySelector('#recentTransactionsTable tbody');
-                if (transactions.slice(0, 10).length === 0) {
+                if (!transactions.length) {
                     tbody.innerHTML = '<tr><td colspan="5">No transactions found</td></tr>';
                 } else {
                     tbody.innerHTML = transactions.slice(0, 10).map(t => `
@@ -697,7 +755,7 @@
             try {
                 const users = await apiRequest('/api/admin/users');
                 const tbody = document.querySelector('#usersTable tbody');
-                if (users.length === 0) {
+                if (!users.length) {
                     tbody.innerHTML = '<tr><td colspan="6">No active users found</td></tr>';
                 } else {
                     tbody.innerHTML = users.map(u => `
@@ -720,7 +778,7 @@
             try {
                 const transactions = await apiRequest('/api/admin/transactions');
                 const tbody = document.querySelector('#transactionsTable tbody');
-                if (transactions.length === 0) {
+                if (!transactions.length) {
                     tbody.innerHTML = '<tr><td colspan="6">No transactions found</td></tr>';
                 } else {
                     tbody.innerHTML = transactions.map(t => `
@@ -743,7 +801,7 @@
             try {
                 const vouchers = await apiRequest('/api/admin/vouchers');
                 const tbody = document.querySelector('#vouchersTable tbody');
-                if (vouchers.length === 0) {
+                if (!vouchers.length) {
                     tbody.innerHTML = '<tr><td colspan="6">No vouchers found</td></tr>';
                 } else {
                     tbody.innerHTML = vouchers.map(v => `
@@ -766,7 +824,7 @@
             try {
                 const plans = await apiRequest('/api/admin/plans');
                 const tbody = document.getElementById('plansTableBody');
-                if (plans.length === 0) {
+                if (!plans.length) {
                     tbody.innerHTML = '<tr><td colspan="7">No plans found</td></tr>';
                 } else {
                     tbody.innerHTML = plans.map(p => `
@@ -823,7 +881,7 @@
             
             const submitBtn = document.querySelector('#editPlanForm button[type="submit"]');
             const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Saving...';
+            submitBtn.innerHTML = '<span class="loading"></span> Saving...';
             submitBtn.disabled = true;
             
             try {
@@ -846,7 +904,7 @@
             } catch (error) {
                 alert('Error: ' + error.message);
             } finally {
-                submitBtn.textContent = originalText;
+                submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             }
         });
@@ -879,7 +937,7 @@
             
             const submitBtn = document.querySelector('#createVoucherForm button[type="submit"]');
             const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Generating...';
+            submitBtn.innerHTML = '<span class="loading"></span> Generating...';
             submitBtn.disabled = true;
             
             try {
@@ -895,36 +953,34 @@
             } catch (error) {
                 alert('Failed to create vouchers');
             } finally {
-                submitBtn.textContent = originalText;
+                submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             }
         });
 
+        // Navigation - THIS IS THE FIX
         document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const page = item.dataset.page;
+            item.addEventListener('click', function() {
+                const page = this.getAttribute('data-page');
                 currentPage = page;
                 
+                // Update active state
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
+                this.classList.add('active');
                 
-                document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
-                document.getElementById(`page-${page}`).style.display = 'block';
-                document.getElementById('pageTitle').textContent = item.querySelector('span:last-child').textContent;
+                // Show the selected page
+                showPage(page);
                 
-                if (page === 'users') loadUsers();
-                if (page === 'transactions') loadTransactions();
-                if (page === 'vouchers') loadVouchers();
-                if (page === 'plans') loadPlans();
-                if (page === 'dashboard') loadDashboardData();
-                
+                // Close mobile menu after selection
                 closeMobileMenu();
             });
         });
 
+        // Mobile menu button
         document.getElementById('mobileMenuBtn').addEventListener('click', openMobileMenu);
         document.getElementById('sidebarOverlay').addEventListener('click', closeMobileMenu);
 
+        // Close modals when clicking outside
         window.addEventListener('click', (e) => {
             const voucherModal = document.getElementById('voucherModal');
             const editModal = document.getElementById('editPlanModal');
@@ -932,6 +988,7 @@
             if (e.target === editModal) editModal.style.display = 'none';
         });
 
+        // Auto-refresh dashboard every 30 seconds
         setInterval(() => {
             if (token && currentPage === 'dashboard') loadDashboardData();
         }, 30000);
