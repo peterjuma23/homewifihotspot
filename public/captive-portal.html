@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>FastConnect Internet - WiFi Portal</title>
     <script src="https://cdn.socket.io/4.6.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -397,7 +398,7 @@
             box-shadow: 0 8px 20px rgba(99,102,241,0.3);
         }
 
-        /* Status Display with WiFi Icon */
+        /* Status Display with Font Awesome WiFi Icons */
         .status-active, .status-inactive {
             text-align: center;
         }
@@ -814,7 +815,10 @@
                 const lastPhone = localStorage.getItem('lastPhone');
                 if (lastPhone && data.phoneNumber.includes(lastPhone.slice(-9))) {
                     showToast(`✅ Your ${data.planName} plan is now active!`, 'success');
-                    setTimeout(() => checkStatus(), 1000);
+                    setTimeout(() => {
+                        document.getElementById('status-phone').value = lastPhone;
+                        checkStatus();
+                    }, 1000);
                 }
             });
             
@@ -1061,16 +1065,19 @@
                 
                 const statusDiv = document.getElementById('status-content');
                 
-                // Check if user has an active connection (not expired)
-                const isActive = data.isActive === true && new Date(data.expiresAt) > new Date();
-                const expiresAtDate = data.expiresAt ? new Date(data.expiresAt) : null;
-                const isExpired = expiresAtDate && expiresAtDate < new Date();
+                // FIXED: Proper status checking
+                const isActiveStatus = data.isActive === true;
+                const hasValidExpiry = data.expiresAt && new Date(data.expiresAt) > new Date();
+                const isConnected = isActiveStatus && hasValidExpiry;
                 
-                if (isActive && !isExpired) {
+                console.log('Status check:', { isActive: data.isActive, expiresAt: data.expiresAt, isConnected });
+                
+                if (isConnected) {
+                    const expiresAtDate = new Date(data.expiresAt);
                     const percentUsed = data.dataLimit && data.dataLimit > 0 ? ((data.bytesUsed || 0) / (data.dataLimit * 1024 * 1024) * 100) : 0;
                     statusDiv.innerHTML = `
                         <div class="status-active">
-                            <div class="wifi-icon connected">📶</div>
+                            <i class="fas fa-wifi wifi-icon connected"></i>
                             <div class="status-badge connected">● CONNECTED</div>
                             <h3 style="margin-top: 16px;">Connected!</h3>
                             <div class="plan-info">
@@ -1092,8 +1099,8 @@
                                     </div>
                                 ` : '<div class="info-row"><span class="info-label">📊 Data</span><span class="info-value">Unlimited</span></div>'}
                             </div>
-                            <p style="color: #10b981; font-size: 0.8rem; margin-top: 8px;">✓ You are online and connected</p>
-                            <button class="btn-secondary" id="refresh-status" style="margin-top: 16px;">🔄 Refresh Status</button>
+                            <p style="color: #10b981; font-size: 0.8rem; margin-top: 8px;"><i class="fas fa-check-circle"></i> You are online and connected</p>
+                            <button class="btn-secondary" id="refresh-status" style="margin-top: 16px;"><i class="fas fa-sync-alt"></i> Refresh Status</button>
                         </div>
                     `;
                     document.getElementById('refresh-status')?.addEventListener('click', () => {
@@ -1103,13 +1110,13 @@
                 } else {
                     statusDiv.innerHTML = `
                         <div class="status-inactive">
-                            <div class="wifi-icon disconnected">📶</div>
+                            <i class="fas fa-wifi-slash wifi-icon disconnected"></i>
                             <div class="status-badge disconnected">● DISCONNECTED</div>
                             <h3 style="margin-top: 16px;">No Active Connection</h3>
                             <p style="color: rgba(255,255,255,0.6); margin: 16px 0;">You are not connected to FastConnect Internet.<br>Purchase a plan or redeem a voucher to get online.</p>
                             <div class="action-buttons">
-                                <button class="btn-secondary" id="try-again">🔄 Try Again</button>
-                                <button class="btn-primary" id="buy-now">📱 Buy Now</button>
+                                <button class="btn-secondary" id="try-again"><i class="fas fa-sync-alt"></i> Try Again</button>
+                                <button class="btn-primary" id="buy-now"><i class="fas fa-shopping-cart"></i> Buy Now</button>
                             </div>
                         </div>
                     `;
@@ -1142,6 +1149,8 @@
                     const lastPhone = localStorage.getItem('lastPhone');
                     if (lastPhone && document.getElementById('status-phone')) {
                         document.getElementById('status-phone').value = lastPhone;
+                        // Auto-check status when switching to status tab
+                        setTimeout(() => checkStatus(), 100);
                     }
                 }
             });
@@ -1164,6 +1173,8 @@
         if (lastPhone) {
             if (document.getElementById('status-phone')) document.getElementById('status-phone').value = lastPhone;
             if (document.getElementById('voucher-phone')) document.getElementById('voucher-phone').value = lastPhone;
+            // Auto-check status on page load if phone exists
+            setTimeout(() => checkStatus(), 500);
         }
 
         // Load plans on page load
