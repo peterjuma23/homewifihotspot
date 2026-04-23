@@ -801,7 +801,8 @@
                         speed_mbps: p.speed_mbps || 2,
                         is_active: p.is_active,
                         features: ['Unlimited Data'],
-                        speed: `${p.speed_mbps || 2} Mbps`
+                        speed: `${p.speed_mbps || 2} Mbps`,
+                        popular: p.plan_name === '24 Hours'
                     }));
                     console.log(`✅ Loaded ${plans.length} plans with speeds`);
                 } else {
@@ -1049,6 +1050,7 @@
             }
         }
 
+        // Tab switching
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.dataset.tab;
@@ -1066,21 +1068,29 @@
             });
         });
 
-        document.getElementById('paymentForm')?.addEventListener('submit', processPayment);
-        document.getElementById('cancelPaymentBtn')?.addEventListener('click', closePaymentModal);
-        document.getElementById('paymentModal')?.addEventListener('click', (e) => {
+        // FIXED: Added event listener for the Pay Now button
+        document.getElementById('confirmPayBtn').addEventListener('click', processPayment);
+        document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
+        
+        // Close modal when clicking outside
+        document.getElementById('paymentModal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('paymentModal')) closePaymentModal();
         });
-        document.getElementById('redeem-btn')?.addEventListener('click', redeemVoucher);
-        document.getElementById('check-status-btn')?.addEventListener('click', checkStatus);
+        
+        document.getElementById('redeem-btn').addEventListener('click', redeemVoucher);
+        document.getElementById('check-status-btn').addEventListener('click', checkStatus);
 
+        // Pre-fill phone numbers
         const lastPhone = localStorage.getItem('lastPhone');
         if (lastPhone) {
             if (document.getElementById('status-phone')) document.getElementById('status-phone').value = lastPhone;
             if (document.getElementById('voucher-phone')) document.getElementById('voucher-phone').value = lastPhone;
         }
 
+        // Load plans on page load
         loadPlans();
+        
+        // Auto-refresh plans every 30 seconds
         setInterval(() => loadPlans(), 30000);
     </script>
 </body>
