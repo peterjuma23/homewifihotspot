@@ -597,7 +597,6 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="buy">📱 Buy Data</button>
             <button class="tab-btn" data-tab="voucher">🎟️ Redeem Voucher</button>
-            <button class="tab-btn" data-tab="status">📊 My Status</button>
         </div>
 
         <div class="panel active" id="buy-panel">
@@ -621,20 +620,6 @@
                     <input type="tel" id="voucher-phone" placeholder="0712345678">
                 </div>
                 <button class="btn-primary" id="redeem-btn">Redeem Voucher</button>
-            </div>
-        </div>
-
-        <!-- Simplified Status Panel -->
-        <div class="panel" id="status-panel">
-            <div class="simple-card">
-                <h3>📊 Connection Status</h3>
-                <div class="subtitle">Check your internet connection</div>
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="tel" id="status-phone" placeholder="0712345678">
-                </div>
-                <button class="btn-secondary" id="check-status-btn">Check Status</button>
-                <div id="status-result" style="margin-top: 24px;"></div>
             </div>
         </div>
 
@@ -689,13 +674,6 @@
             socket.on('payment_completed', (data) => {
                 showToast(`✅ ${data.planName} plan activated!`, 'success');
                 closePaymentModal();
-                const lastPhone = localStorage.getItem('lastPhone');
-                if (lastPhone) {
-                    setTimeout(() => {
-                        document.getElementById('status-phone').value = lastPhone;
-                        checkStatus();
-                    }, 1000);
-                }
             });
             
             socket.on('payment_failed', () => {
@@ -706,11 +684,7 @@
                 console.log('User activated:', data);
                 const lastPhone = localStorage.getItem('lastPhone');
                 if (lastPhone) {
-                    showToast(`✅ Your plan is now active!`, 'success');
-                    setTimeout(() => {
-                        document.getElementById('status-phone').value = lastPhone;
-                        checkStatus();
-                    }, 1000);
+                    showToast(`✅ Your ${data.planName} plan is now active!`, 'success');
                 }
             });
             
@@ -919,11 +893,6 @@
                     document.getElementById('voucher-code').value = '';
                     document.getElementById('voucher-phone').value = '';
                     localStorage.setItem('lastPhone', phone);
-                    setTimeout(() => {
-                        document.getElementById('status-phone').value = phone;
-                        checkStatus();
-                        document.querySelector('[data-tab="status"]').click();
-                    }, 500);
                 } else {
                     showToast(data.error || 'Invalid voucher', 'error');
                 }
@@ -931,63 +900,6 @@
                 showToast('Network error', 'error');
             } finally {
                 btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        async function checkStatus() {
-            let phone = document.getElementById('status-phone').value.trim();
-            if (!phone) {
-                showToast('Enter phone number', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('check-status-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="loading"></span>Checking...';
-            btn.disabled = true;
-            const resultDiv = document.getElementById('status-result');
-
-            try {
-                const response = await fetch('/api/check-status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phoneNumber: phone })
-                });
-                const data = await response.json();
-                
-                const isActive = data.isActive === true && data.expiresAt && new Date(data.expiresAt) > new Date();
-                
-                if (isActive) {
-                    const expiresAtDate = new Date(data.expiresAt);
-                    resultDiv.innerHTML = `
-                        <div style="background: rgba(16,185,129,0.15); border-radius: 20px; padding: 20px; text-align: center; border: 1px solid rgba(16,185,129,0.3);">
-                            <i class="fas fa-wifi" style="font-size: 3rem; color: #10b981; margin-bottom: 10px;"></i>
-                            <h4 style="color: #10b981; margin-bottom: 10px;">CONNECTED</h4>
-                            <p><strong>Plan:</strong> ${data.plan}</p>
-                            <p><strong>Expires:</strong> ${expiresAtDate.toLocaleString()}</p>
-                            ${data.dataLimit && data.dataLimit > 0 ? `<p><strong>Data:</strong> ${((data.bytesUsed || 0) / 1024 / 1024).toFixed(1)} MB / ${data.dataLimit} MB</p>` : '<p><strong>Data:</strong> Unlimited</p>'}
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div style="background: rgba(239,68,68,0.15); border-radius: 20px; padding: 20px; text-align: center; border: 1px solid rgba(239,68,68,0.3);">
-                            <i class="fas fa-wifi-slash" style="font-size: 3rem; color: #ef4444; margin-bottom: 10px;"></i>
-                            <h4 style="color: #ef4444; margin-bottom: 10px;">DISCONNECTED</h4>
-                            <p>No active connection found.</p>
-                            <p style="margin-top: 10px;">Please purchase a plan or redeem a voucher.</p>
-                            <button class="btn-primary" id="buyNowFromStatus" style="margin-top: 15px;">Buy Now</button>
-                        </div>
-                    `;
-                    document.getElementById('buyNowFromStatus')?.addEventListener('click', () => {
-                        document.querySelector('[data-tab="buy"]').click();
-                    });
-                }
-            } catch (error) {
-                console.error('Status check error:', error);
-                resultDiv.innerHTML = `<div style="background: rgba(239,68,68,0.15); border-radius: 20px; padding: 20px; text-align: center;">Error checking status. Please try again.</div>`;
-                showToast('Error checking status. Please try again.', 'error');
-            } finally {
                 btn.disabled = false;
             }
         }
@@ -1000,16 +912,6 @@
                 btn.classList.add('active');
                 document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
                 document.getElementById(`${tab}-panel`).classList.add('active');
-                
-                if (tab === 'status') {
-                    const lastPhone = localStorage.getItem('lastPhone');
-                    if (lastPhone && document.getElementById('status-phone')) {
-                        document.getElementById('status-phone').value = lastPhone;
-                        setTimeout(() => checkStatus(), 100);
-                    }
-                    // Clear previous result
-                    document.getElementById('status-result').innerHTML = '';
-                }
             });
         });
 
@@ -1021,12 +923,10 @@
         });
         
         document.getElementById('redeem-btn').addEventListener('click', redeemVoucher);
-        document.getElementById('check-status-btn').addEventListener('click', checkStatus);
 
         // Pre-fill phone numbers
         const lastPhone = localStorage.getItem('lastPhone');
         if (lastPhone) {
-            if (document.getElementById('status-phone')) document.getElementById('status-phone').value = lastPhone;
             if (document.getElementById('voucher-phone')) document.getElementById('voucher-phone').value = lastPhone;
         }
 
