@@ -243,7 +243,7 @@ const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     message: { error: 'Too many requests, please try again later.' },
-    skip: (req) => req.path === '/health' // Skip rate limiting for health check
+    skip: (req) => req.path === '/health' || req.path === '/api/plans'
 });
 app.use('/api/', limiter);
 
@@ -635,31 +635,28 @@ app.post('/api/admin/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// FIXED: Get admin dashboard stats - Using correct case for status
+// FIXED: Get admin dashboard stats - Case insensitive status check
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
         
         if (dbAvailable && pool) {
-            // Active users (is_active = true AND not expired)
             const [activeResult] = await pool.query(
                 'SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND expires_at > NOW()'
             );
             stats.activeUsers = activeResult[0]?.count || 0;
             
-            // Total revenue from completed transactions (status can be 'completed' or 'COMPLETED')
+            // Using LOWER() to handle both 'completed' and 'COMPLETED'
             const [revenueResult] = await pool.query(
                 "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE LOWER(status) = 'completed'"
             );
             stats.totalRevenue = parseFloat(revenueResult[0]?.total || 0);
             
-            // Today's revenue - using created_at column
             const [todayResult] = await pool.query(
                 "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE LOWER(status) = 'completed' AND DATE(created_at) = CURDATE()"
             );
             stats.todayRevenue = parseFloat(todayResult[0]?.total || 0);
             
-            // Total completed transactions
             const [countResult] = await pool.query(
                 "SELECT COUNT(*) as count FROM transactions WHERE LOWER(status) = 'completed'"
             );
@@ -667,7 +664,6 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
             
             console.log('📊 Stats calculated:', stats);
         } else {
-            // In-memory fallback
             const now = new Date();
             stats.activeUsers = memoryStore.users.filter(u => u.is_active === true && new Date(u.expires_at) > now).length;
             const completedTxns = memoryStore.transactions.filter(t => t.status === 'completed');
@@ -687,7 +683,6 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     }
 });
 
-// FIXED: Get only active users (is_active = true AND not expired)
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
