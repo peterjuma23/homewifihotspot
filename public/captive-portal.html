@@ -398,113 +398,6 @@
             box-shadow: 0 8px 20px rgba(99,102,241,0.3);
         }
 
-        /* Status Display with Font Awesome WiFi Icons */
-        .status-active, .status-inactive {
-            text-align: center;
-        }
-
-        .wifi-icon {
-            font-size: 4rem;
-            margin-bottom: 16px;
-            display: inline-block;
-        }
-
-        .wifi-icon.connected {
-            color: #10b981;
-            text-shadow: 0 0 20px rgba(16,185,129,0.5);
-            animation: pulseGlow 2s ease-in-out infinite;
-        }
-
-        .wifi-icon.disconnected {
-            color: #ef4444;
-            text-shadow: 0 0 10px rgba(239,68,68,0.3);
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% { opacity: 0.8; text-shadow: 0 0 10px rgba(16,185,129,0.3); }
-            50% { opacity: 1; text-shadow: 0 0 25px rgba(16,185,129,0.8); }
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-top: 8px;
-        }
-
-        .status-badge.connected {
-            background: rgba(16,185,129,0.2);
-            color: #10b981;
-            border: 1px solid rgba(16,185,129,0.3);
-        }
-
-        .status-badge.disconnected {
-            background: rgba(239,68,68,0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239,68,68,0.3);
-        }
-
-        .plan-info {
-            background: rgba(255,255,255,0.05);
-            border-radius: 24px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: left;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            color: rgba(255,255,255,0.6);
-        }
-
-        .info-value {
-            font-weight: 600;
-            word-break: break-word;
-            text-align: right;
-        }
-
-        .progress-bar {
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            height: 6px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            background: linear-gradient(90deg, #10b981, #34d399);
-            height: 100%;
-            border-radius: 20px;
-            transition: width 0.3s;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .action-buttons .btn-primary,
-        .action-buttons .btn-secondary {
-            flex: 1;
-            min-width: 120px;
-        }
-
         .payment-modal {
             display: none;
             position: fixed;
@@ -667,7 +560,6 @@
             .simple-card h3 { font-size: 1.3rem; }
             .payment-card { padding: 24px 20px; }
             .toast { white-space: normal; max-width: 90%; font-size: 0.85rem; }
-            .wifi-icon { font-size: 3rem; }
         }
         
         @media (max-width: 480px) {
@@ -732,15 +624,17 @@
             </div>
         </div>
 
+        <!-- Simplified Status Panel -->
         <div class="panel" id="status-panel">
-            <div class="simple-card" id="status-content">
-                <h3>📊 My Status</h3>
-                <div class="subtitle">Check your internet connection status</div>
+            <div class="simple-card">
+                <h3>📊 Connection Status</h3>
+                <div class="subtitle">Check your internet connection</div>
                 <div class="form-group">
                     <label>Phone Number</label>
                     <input type="tel" id="status-phone" placeholder="0712345678">
                 </div>
                 <button class="btn-secondary" id="check-status-btn">Check Status</button>
+                <div id="status-result" style="margin-top: 24px;"></div>
             </div>
         </div>
 
@@ -795,13 +689,11 @@
             socket.on('payment_completed', (data) => {
                 showToast(`✅ ${data.planName} plan activated!`, 'success');
                 closePaymentModal();
-                // Auto-check status after payment
                 const lastPhone = localStorage.getItem('lastPhone');
                 if (lastPhone) {
                     setTimeout(() => {
                         document.getElementById('status-phone').value = lastPhone;
                         checkStatus();
-                        document.querySelector('[data-tab="status"]').click();
                     }, 1000);
                 }
             });
@@ -813,8 +705,8 @@
             socket.on('user_activated', (data) => {
                 console.log('User activated:', data);
                 const lastPhone = localStorage.getItem('lastPhone');
-                if (lastPhone && data.phoneNumber.includes(lastPhone.slice(-9))) {
-                    showToast(`✅ Your ${data.planName} plan is now active!`, 'success');
+                if (lastPhone) {
+                    showToast(`✅ Your plan is now active!`, 'success');
                     setTimeout(() => {
                         document.getElementById('status-phone').value = lastPhone;
                         checkStatus();
@@ -866,7 +758,7 @@
                         speed: `${p.speed_mbps || 2} Mbps`,
                         popular: p.plan_name === '24 Hours'
                     }));
-                    console.log(`✅ Loaded ${plans.length} plans with speeds`);
+                    console.log(`✅ Loaded ${plans.length} plans`);
                 } else {
                     plans = getDefaultPlans();
                 }
@@ -1027,10 +919,10 @@
                     document.getElementById('voucher-code').value = '';
                     document.getElementById('voucher-phone').value = '';
                     localStorage.setItem('lastPhone', phone);
-                    document.querySelector('[data-tab="status"]').click();
                     setTimeout(() => {
                         document.getElementById('status-phone').value = phone;
                         checkStatus();
+                        document.querySelector('[data-tab="status"]').click();
                     }, 500);
                 } else {
                     showToast(data.error || 'Invalid voucher', 'error');
@@ -1054,6 +946,7 @@
             const originalText = btn.innerHTML;
             btn.innerHTML = '<span class="loading"></span>Checking...';
             btn.disabled = true;
+            const resultDiv = document.getElementById('status-result');
 
             try {
                 const response = await fetch('/api/check-status', {
@@ -1063,73 +956,36 @@
                 });
                 const data = await response.json();
                 
-                const statusDiv = document.getElementById('status-content');
+                const isActive = data.isActive === true && data.expiresAt && new Date(data.expiresAt) > new Date();
                 
-                // FIXED: Proper status checking
-                const isActiveStatus = data.isActive === true;
-                const hasValidExpiry = data.expiresAt && new Date(data.expiresAt) > new Date();
-                const isConnected = isActiveStatus && hasValidExpiry;
-                
-                console.log('Status check:', { isActive: data.isActive, expiresAt: data.expiresAt, isConnected });
-                
-                if (isConnected) {
+                if (isActive) {
                     const expiresAtDate = new Date(data.expiresAt);
-                    const percentUsed = data.dataLimit && data.dataLimit > 0 ? ((data.bytesUsed || 0) / (data.dataLimit * 1024 * 1024) * 100) : 0;
-                    statusDiv.innerHTML = `
-                        <div class="status-active">
-                            <i class="fas fa-wifi wifi-icon connected"></i>
-                            <div class="status-badge connected">● CONNECTED</div>
-                            <h3 style="margin-top: 16px;">Connected!</h3>
-                            <div class="plan-info">
-                                <div class="info-row">
-                                    <span class="info-label">📡 Plan</span>
-                                    <span class="info-value">${data.plan || 'Active Plan'}</span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-label">⏰ Expires On</span>
-                                    <span class="info-value">${expiresAtDate.toLocaleString()}</span>
-                                </div>
-                                ${data.dataLimit && data.dataLimit > 0 ? `
-                                    <div class="info-row">
-                                        <span class="info-label">📊 Data Used</span>
-                                        <span class="info-value">${((data.bytesUsed || 0) / 1024 / 1024).toFixed(1)} MB / ${data.dataLimit} MB</span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: ${Math.min(percentUsed, 100)}%"></div>
-                                    </div>
-                                ` : '<div class="info-row"><span class="info-label">📊 Data</span><span class="info-value">Unlimited</span></div>'}
-                            </div>
-                            <p style="color: #10b981; font-size: 0.8rem; margin-top: 8px;"><i class="fas fa-check-circle"></i> You are online and connected</p>
-                            <button class="btn-secondary" id="refresh-status" style="margin-top: 16px;"><i class="fas fa-sync-alt"></i> Refresh Status</button>
+                    resultDiv.innerHTML = `
+                        <div style="background: rgba(16,185,129,0.15); border-radius: 20px; padding: 20px; text-align: center; border: 1px solid rgba(16,185,129,0.3);">
+                            <i class="fas fa-wifi" style="font-size: 3rem; color: #10b981; margin-bottom: 10px;"></i>
+                            <h4 style="color: #10b981; margin-bottom: 10px;">CONNECTED</h4>
+                            <p><strong>Plan:</strong> ${data.plan}</p>
+                            <p><strong>Expires:</strong> ${expiresAtDate.toLocaleString()}</p>
+                            ${data.dataLimit && data.dataLimit > 0 ? `<p><strong>Data:</strong> ${((data.bytesUsed || 0) / 1024 / 1024).toFixed(1)} MB / ${data.dataLimit} MB</p>` : '<p><strong>Data:</strong> Unlimited</p>'}
                         </div>
                     `;
-                    document.getElementById('refresh-status')?.addEventListener('click', () => {
-                        document.getElementById('status-phone').value = phone;
-                        checkStatus();
-                    });
                 } else {
-                    statusDiv.innerHTML = `
-                        <div class="status-inactive">
-                            <i class="fas fa-wifi-slash wifi-icon disconnected"></i>
-                            <div class="status-badge disconnected">● DISCONNECTED</div>
-                            <h3 style="margin-top: 16px;">No Active Connection</h3>
-                            <p style="color: rgba(255,255,255,0.6); margin: 16px 0;">You are not connected to FastConnect Internet.<br>Purchase a plan or redeem a voucher to get online.</p>
-                            <div class="action-buttons">
-                                <button class="btn-secondary" id="try-again"><i class="fas fa-sync-alt"></i> Try Again</button>
-                                <button class="btn-primary" id="buy-now"><i class="fas fa-shopping-cart"></i> Buy Now</button>
-                            </div>
+                    resultDiv.innerHTML = `
+                        <div style="background: rgba(239,68,68,0.15); border-radius: 20px; padding: 20px; text-align: center; border: 1px solid rgba(239,68,68,0.3);">
+                            <i class="fas fa-wifi-slash" style="font-size: 3rem; color: #ef4444; margin-bottom: 10px;"></i>
+                            <h4 style="color: #ef4444; margin-bottom: 10px;">DISCONNECTED</h4>
+                            <p>No active connection found.</p>
+                            <p style="margin-top: 10px;">Please purchase a plan or redeem a voucher.</p>
+                            <button class="btn-primary" id="buyNowFromStatus" style="margin-top: 15px;">Buy Now</button>
                         </div>
                     `;
-                    document.getElementById('try-again')?.addEventListener('click', () => {
-                        document.getElementById('status-phone').value = phone;
-                        checkStatus();
-                    });
-                    document.getElementById('buy-now')?.addEventListener('click', () => {
+                    document.getElementById('buyNowFromStatus')?.addEventListener('click', () => {
                         document.querySelector('[data-tab="buy"]').click();
                     });
                 }
             } catch (error) {
                 console.error('Status check error:', error);
+                resultDiv.innerHTML = `<div style="background: rgba(239,68,68,0.15); border-radius: 20px; padding: 20px; text-align: center;">Error checking status. Please try again.</div>`;
                 showToast('Error checking status. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
@@ -1149,9 +1005,10 @@
                     const lastPhone = localStorage.getItem('lastPhone');
                     if (lastPhone && document.getElementById('status-phone')) {
                         document.getElementById('status-phone').value = lastPhone;
-                        // Auto-check status when switching to status tab
                         setTimeout(() => checkStatus(), 100);
                     }
+                    // Clear previous result
+                    document.getElementById('status-result').innerHTML = '';
                 }
             });
         });
@@ -1159,8 +1016,6 @@
         // Payment event listeners
         document.getElementById('confirmPayBtn').addEventListener('click', processPayment);
         document.getElementById('cancelPaymentBtn').addEventListener('click', closePaymentModal);
-        
-        // Close modal when clicking outside
         document.getElementById('paymentModal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('paymentModal')) closePaymentModal();
         });
@@ -1173,14 +1028,10 @@
         if (lastPhone) {
             if (document.getElementById('status-phone')) document.getElementById('status-phone').value = lastPhone;
             if (document.getElementById('voucher-phone')) document.getElementById('voucher-phone').value = lastPhone;
-            // Auto-check status on page load if phone exists
-            setTimeout(() => checkStatus(), 500);
         }
 
         // Load plans on page load
         loadPlans();
-        
-        // Auto-refresh plans every 30 seconds
         setInterval(() => loadPlans(), 30000);
     </script>
 </body>
