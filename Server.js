@@ -37,27 +37,38 @@ let pool;
 
 async function initDatabase() {
     try {
-        // Aiven MySQL configuration with SSL
-        pool = mysql.createPool({
-            host: 'fastconnectinternet-peterjumaodhiambo254-53b8.c.aivencloud.com',
-            port: 20748,
-            user: 'avnadmin',
-            password: 'AVNS_49G54a8jlb3LZQOJyP',
-            database: 'defaultdb',
+        // Get database configuration from environment variables
+        const dbConfig = {
+            host: process.env.DB_HOST,
+            port: parseInt(process.env.DB_PORT) || 3306,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
             waitForConnections: true,
             connectionLimit: 5,
             queueLimit: 0,
             enableKeepAlive: true,
             keepAliveInitialDelay: 10000,
-            // SSL is REQUIRED for Aiven
-            ssl: {
-                rejectUnauthorized: false
-            },
             connectTimeout: 10000
+        };
+        
+        // Add SSL for Aiven (always required)
+        dbConfig.ssl = {
+            rejectUnauthorized: false
+        };
+        
+        console.log('🔌 Connecting to database with config:', {
+            host: dbConfig.host,
+            port: dbConfig.port,
+            user: dbConfig.user,
+            database: dbConfig.database,
+            ssl: true
         });
         
+        pool = mysql.createPool(dbConfig);
+        
         const connection = await pool.getConnection();
-        console.log('✅ MySQL database connected to Aiven!');
+        console.log('✅ MySQL database connected to Aiven successfully!');
         connection.release();
         
         await createTables();
