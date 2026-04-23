@@ -102,7 +102,6 @@
             font-size: 1.2rem;
         }
 
-        /* Overlay for mobile menu */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -357,7 +356,6 @@
             display: none;
         }
 
-        /* Responsive Styles */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -401,7 +399,6 @@
     </div>
 
     <div id="dashboard" class="dashboard-container">
-        <!-- Sidebar Overlay for mobile -->
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
         
         <div class="sidebar" id="sidebar">
@@ -436,129 +433,128 @@
                     <h3 style="margin-bottom: 15px;">Recent Transactions</h3>
                     <table id="recentTransactionsTable">
                         <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
-                        <tbody><tr><td colspan="5">Loading...</td></tr>
-                    </table>
-                </div>
-            </div>
+                        <tbody><tr><td colspan="5">Loading...<\/td><\/tr><\/tbody>
+                    <\/table>
+                <\/div>
+            <\/div>
 
             <div id="page-users" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">Active Users</h3>
                     <table id="usersTable">
-                        <thead><tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr></thead>
-                        <tbody><tr><td colspan="6">Loading...</td></tr>
-                    </table>
-                </div>
-            </div>
+                        <thead><tr><th>Phone<\/th><th>Name<\/th><th>Plan<\/th><th>Expires<\/th><th>Data Used<\/th><th>Action<\/th><\/tr><\/thead>
+                        <tbody><tr><td colspan="6">Loading...<\/td><\/tr><\/tbody>
+                    <\/table>
+                <\/div>
+            <\/div>
 
             <div id="page-transactions" style="display: none;">
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px;">All Transactions</h3>
                     <table id="transactionsTable">
-                        <thead><tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
-                        <tbody><tr><td colspan="6">Loading...</td></tr>
-                    </table>
-                </div>
-            </div>
+                        <thead><tr><th>Date<\/th><th>Phone<\/th><th>Plan<\/th><th>Amount<\/th><th>Method<\/th><th>Status<\/th><\/tr><\/thead>
+                        <tbody><td><td colspan="6">Loading...<\/td><\/tr><\/tbody>
+                    <\/table>
+                <\/div>
+            <\/div>
 
             <div id="page-vouchers" style="display: none;">
                 <div style="margin-bottom: 20px;">
-                    <button class="btn-primary" id="createVoucherBtn">+ Create New Voucher</button>
-                </div>
+                    <button class="btn-primary" id="createVoucherBtn">+ Create New Voucher<\/button>
+                <\/div>
                 <div class="table-container">
-                    <h3 style="margin-bottom: 15px;">Vouchers</h3>
+                    <h3 style="margin-bottom: 15px;">Vouchers<\/h3>
                     <table id="vouchersTable">
-                        <thead><tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
-                        <tbody><tr><td colspan="6">Loading...</td></tr>
-                    </table>
-                </div>
-            </div>
+                        <thead><tr><th>Code<\/th><th>Plan<\/th><th>Amount<\/th><th>Status<\/th><th>Used By<\/th><th>Created<\/th><\/tr><\/thead>
+                        <tbody><tr><td colspan="6">Loading...<\/td><\/tr><\/tbody>
+                    <\/table>
+                <\/div>
+            <\/div>
 
             <div id="page-plans" style="display: none;">
                 <div class="table-container">
-                    <h3 style="margin-bottom: 15px;">Internet Plans</h3>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Edit plans - changes reflect immediately on customer portal</p>
+                    <h3 style="margin-bottom: 15px;">Internet Plans<\/h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 0.9rem;">✏️ Edit plans - changes reflect immediately on customer portal<\/p>
                     <table id="plansTable">
                         <thead>
                             <tr>
-                                <th>Plan Name</th>
-                                <th>Duration</th>
-                                <th>Price (KES)</th>
-                                <th>Data Limit</th>
-                                <th>Speed (Mbps)</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="plansTableBody"><tr><td colspan="7">Loading...</td></tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+                                <th>Plan Name<\/th>
+                                <th>Duration<\/th>
+                                <th>Price (KES)<\/th>
+                                <th>Data Limit<\/th>
+                                <th>Speed (Mbps)<\/th>
+                                <th>Status<\/th>
+                                <th>Actions<\/th>
+                            <\/tr>
+                        <\/thead>
+                        <tbody id="plansTableBody"><tr><td colspan="7">Loading...<\/td><\/tr><\/tbody>
+                    <\/table>
+                <\/div>
+            <\/div>
+        <\/div>
+    <\/div>
 
     <div id="voucherModal" class="modal">
         <div class="modal-content">
-            <h3>Create Voucher</h3>
+            <h3>Create Voucher<\/h3>
             <form id="createVoucherForm">
                 <div class="form-group">
-                    <label>Plan</label>
-                    <select id="voucherPlan" required></select>
-                </div>
+                    <label>Plan<\/label>
+                    <select id="voucherPlan" required><\/select>
+                <\/div>
                 <div class="form-group">
-                    <label>Quantity</label>
+                    <label>Quantity<\/label>
                     <input type="number" id="voucherQuantity" value="1" min="1" max="100" required>
-                </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Generate Vouchers</button>
-                <button type="button" class="btn-primary" id="closeModalBtn" style="margin-top: 10px; background: #666;">Cancel</button>
-            </form>
-        </div>
-    </div>
+                <\/div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Generate Vouchers<\/button>
+                <button type="button" class="btn-primary" id="closeModalBtn" style="margin-top: 10px; background: #666;">Cancel<\/button>
+            <\/form>
+        <\/div>
+    <\/div>
 
     <div id="editPlanModal" class="modal">
         <div class="modal-content">
-            <h3>Edit Plan</h3>
+            <h3>Edit Plan<\/h3>
             <form id="editPlanForm">
                 <input type="hidden" id="editPlanId">
                 <div class="form-group">
-                    <label>Plan Name</label>
+                    <label>Plan Name<\/label>
                     <input type="text" id="editPlanName" required>
-                </div>
+                <\/div>
                 <div class="form-group">
-                    <label>Duration (hours)</label>
+                    <label>Duration (hours)<\/label>
                     <input type="number" id="editPlanDuration" required min="1">
-                </div>
+                <\/div>
                 <div class="form-group">
-                    <label>Price (KES)</label>
+                    <label>Price (KES)<\/label>
                     <input type="number" id="editPlanPrice" required min="0" step="1">
-                </div>
+                <\/div>
                 <div class="form-group">
-                    <label>Data Limit (MB) - 0 for unlimited</label>
+                    <label>Data Limit (MB) - 0 for unlimited<\/label>
                     <input type="number" id="editPlanDataLimit" required min="0">
-                </div>
+                <\/div>
                 <div class="form-group">
-                    <label>Speed (Mbps)</label>
+                    <label>Speed (Mbps)<\/label>
                     <input type="number" id="editPlanSpeed" required min="1" max="100" step="1">
-                </div>
+                <\/div>
                 <div class="form-group">
-                    <label>Status</label>
+                    <label>Status<\/label>
                     <select id="editPlanStatus">
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Save Changes</button>
-                <button type="button" class="btn-primary" id="closeEditModalBtn" style="margin-top: 10px; background: #666;">Cancel</button>
-            </form>
-        </div>
-    </div>
+                        <option value="1">Active<\/option>
+                        <option value="0">Inactive<\/option>
+                    <\/select>
+                <\/div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Save Changes<\/button>
+                <button type="button" class="btn-primary" id="closeEditModalBtn" style="margin-top: 10px; background: #666;">Cancel<\/button>
+            <\/form>
+        <\/div>
+    <\/div>
 
     <script>
         let token = null;
         let socket = null;
         let currentPage = 'dashboard';
 
-        // Mobile menu functions
         function openMobileMenu() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
@@ -594,7 +590,7 @@
             try {
                 const response = await fetch('/api/admin/login', {
                     method: 'POST',
-                    headers: { 'Content-Type':application/json' },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
                 const data = await response.json();
@@ -904,40 +900,31 @@
             }
         });
 
-        // Navigation with auto-close mobile menu
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 const page = item.dataset.page;
                 currentPage = page;
                 
-                // Update active state
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
                 
-                // Show selected page
                 document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
                 document.getElementById(`page-${page}`).style.display = 'block';
                 document.getElementById('pageTitle').textContent = item.querySelector('span:last-child').textContent;
                 
-                // Load page data
                 if (page === 'users') loadUsers();
                 if (page === 'transactions') loadTransactions();
                 if (page === 'vouchers') loadVouchers();
                 if (page === 'plans') loadPlans();
                 if (page === 'dashboard') loadDashboardData();
                 
-                // Close mobile menu after selection (on mobile)
                 closeMobileMenu();
             });
         });
 
-        // Mobile menu button click
         document.getElementById('mobileMenuBtn').addEventListener('click', openMobileMenu);
-        
-        // Overlay click to close
         document.getElementById('sidebarOverlay').addEventListener('click', closeMobileMenu);
 
-        // Close modals when clicking outside
         window.addEventListener('click', (e) => {
             const voucherModal = document.getElementById('voucherModal');
             const editModal = document.getElementById('editPlanModal');
@@ -945,7 +932,6 @@
             if (e.target === editModal) editModal.style.display = 'none';
         });
 
-        // Auto-refresh dashboard every 30 seconds
         setInterval(() => {
             if (token && currentPage === 'dashboard') loadDashboardData();
         }, 30000);
