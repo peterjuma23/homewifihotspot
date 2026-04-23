@@ -64,11 +64,59 @@ async function initDatabase() {
         
         await createTables();
         
+        // Auto-fix phone numbers in database
+        await fixPhoneNumbers();
+        
         return true;
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
         console.log('⚠️ Running in demo mode - using in-memory storage');
         return false;
+    }
+}
+
+async function fixPhoneNumbers() {
+    try {
+        console.log('🔧 Checking and fixing phone number formats...');
+        
+        // Fix phone numbers that start with 0 (e.g., 0712345678 -> 254712345678)
+        const [result] = await pool.query(
+            `UPDATE users 
+             SET phone_number = CONCAT('254', SUBSTRING(phone_number, 2)) 
+             WHERE phone_number LIKE '0%' AND LENGTH(phone_number) = 10`
+        );
+        
+        if (result.affectedRows > 0) {
+            console.log(`✅ Fixed ${result.affectedRows} user phone number(s) from 0xxx to 254xxx format`);
+        }
+        
+        // Fix phone numbers that are too short (e.g., 712345678 -> 254712345678)
+        const [result2] = await pool.query(
+            `UPDATE users 
+             SET phone_number = CONCAT('254', phone_number) 
+             WHERE phone_number NOT LIKE '254%' 
+             AND phone_number NOT LIKE '0%'
+             AND LENGTH(phone_number) = 9`
+        );
+        
+        if (result2.affectedRows > 0) {
+            console.log(`✅ Fixed ${result2.affectedRows} user phone number(s) from 7xx to 2547xx format`);
+        }
+        
+        // Also fix phone numbers in transactions table
+        const [result3] = await pool.query(
+            `UPDATE transactions 
+             SET phone_number = CONCAT('254', SUBSTRING(phone_number, 2)) 
+             WHERE phone_number LIKE '0%' AND LENGTH(phone_number) = 10`
+        );
+        
+        if (result3.affectedRows > 0) {
+            console.log(`✅ Fixed ${result3.affectedRows} transaction phone number(s)`);
+        }
+        
+        console.log('✅ Phone number format check complete');
+    } catch (error) {
+        console.log('⚠️ Phone number fix skipped:', error.message);
     }
 }
 
@@ -536,6 +584,7 @@ app.post('/api/voucher/redeem', async (req, res) => {
     }
 });
 
+// FIXED: Check user status - With phone number normalization
 app.post('/api/check-status', async (req, res) => {
     const { phoneNumber, macAddress } = req.body;
     
@@ -545,13 +594,29 @@ app.post('/api/check-status', async (req, res) => {
     
     try {
         let user = null;
+        let searchPhone = phoneNumber;
+        
+        // Normalize phone number for searching
+        if (searchPhone) {
+            // Remove any non-digit characters
+            searchPhone = searchPhone.replace(/\D/g, '');
+            // If starts with 0, replace with 254
+            if (searchPhone.startsWith('0')) {
+                searchPhone = '254' + searchPhone.substring(1);
+            }
+            // If doesn't start with 254 and is 9 digits (e.g., 712345678), add 254
+            if (!searchPhone.startsWith('254') && searchPhone.length === 9) {
+                searchPhone = '254' + searchPhone;
+            }
+            console.log(`🔍 Checking status for: ${searchPhone} (original: ${phoneNumber})`);
+        }
         
         if (dbAvailable && pool) {
             let query = 'SELECT * FROM users WHERE ';
             let params = [];
-            if (phoneNumber) {
+            if (searchPhone) {
                 query += 'phone_number = ?';
-                params.push(phoneNumber);
+                params.push(searchPhone);
             } else {
                 query += 'mac_address = ?';
                 params.push(macAddress);
@@ -559,23 +624,42 @@ app.post('/api/check-status', async (req, res) => {
             const [rows] = await pool.query(query, params);
             user = rows[0];
             
-            if (user && user.expires_at && new Date(user.expires_at) < new Date()) {
-                await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
-                user.is_active = false;
-            }
-            
-            if (user && macAddress && !user.mac_address) {
-                await pool.query('UPDATE users SET mac_address = ?, last_seen = NOW() WHERE id = ?', [macAddress, user.id]);
-                user.mac_address = macAddress;
+            if (user) {
+                console.log(`👤 Found user: ${user.phone_number}, active: ${user.is_active}, expires: ${user.expires_at}`);
+                
+                // Check if expired and update if needed
+                const now = new Date();
+                const expiresAt = new Date(user.expires_at);
+                
+                if (expiresAt < now) {
+                    await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
+                    user.is_active = false;
+                    console.log(`⏰ User ${user.phone_number} expired, set inactive`);
+                }
+                
+                if (user && macAddress && !user.mac_address) {
+                    await pool.query('UPDATE users SET mac_address = ?, last_seen = NOW() WHERE id = ?', [macAddress, user.id]);
+                    user.mac_address = macAddress;
+                }
             }
         } else {
-            user = memoryStore.users.find(u => u.phone_number === phoneNumber || u.mac_address === macAddress);
+            user = memoryStore.users.find(u => {
+                let uPhone = u.phone_number.replace(/\D/g, '');
+                return uPhone === searchPhone || u.mac_address === macAddress;
+            });
             if (user && user.expires_at && new Date(user.expires_at) < new Date()) {
                 user.is_active = false;
             }
         }
         
-        const isActive = user && user.is_active === true && user.expires_at && new Date(user.expires_at) > new Date();
+        // Determine if user is actively connected
+        const now = new Date();
+        const isActive = user && 
+                        user.is_active === true && 
+                        user.expires_at && 
+                        new Date(user.expires_at) > now;
+        
+        console.log(`📊 Status result for ${searchPhone}: ${isActive ? 'CONNECTED ✅' : 'DISCONNECTED ❌'}`);
         
         if (isActive) {
             res.json({
@@ -594,6 +678,7 @@ app.post('/api/check-status', async (req, res) => {
             });
         }
     } catch (error) {
+        console.error('❌ Status check error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -635,7 +720,6 @@ app.post('/api/admin/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// FIXED: Get admin dashboard stats - Case insensitive status check
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
@@ -646,7 +730,6 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
             );
             stats.activeUsers = activeResult[0]?.count || 0;
             
-            // Using LOWER() to handle both 'completed' and 'COMPLETED'
             const [revenueResult] = await pool.query(
                 "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE LOWER(status) = 'completed'"
             );
