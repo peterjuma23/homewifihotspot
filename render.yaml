@@ -1,0 +1,44 @@
+# FastConnect Internet - Render Deployment Configuration
+# Add your real secrets in Render Dashboard, not in this file!
+
+services:
+  - type: web
+    name: fastconnect-internet
+    env: node
+    region: frankfurt  # Change to ohio for US, or singapore for Asia
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      # Server Configuration
+      - key: PORT
+        value: 3000
+      
+      # JWT Secret - Render will generate a secure one
+      - key: JWT_SECRET
+        generateValue: true
+      
+      # Database Configuration - Add these in Render Dashboard
+      # DO NOT put real passwords in this file!
+      - key: DB_HOST
+        sync: false  # This means you'll add it manually in Render
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      
+      # M-Pesa Configuration (Optional)
+      - key: M_PESA_CONSUMER_KEY
+        sync: false
+      - key: M_PESA_CONSUMER_SECRET
+        sync: false
+      - key: M_PESA_PASSKEY
+        sync: false
+      - key: M_PESA_SHORTCODE
+        value: 174379
+      - key: M_PESA_ENV
+        value: sandbox
