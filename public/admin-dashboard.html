@@ -6,6 +6,8 @@
     <title>FastConnect Admin Dashboard</title>
     <script src="https://cdn.socket.io/4.6.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -182,6 +184,47 @@
             padding: 20px;
             overflow-x: auto;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-download {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-download:hover {
+            background: #059669;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-bar input, .filter-bar select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
         }
 
         table {
@@ -367,6 +410,10 @@
                 padding: 8px;
                 font-size: 0.85rem;
             }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
@@ -459,15 +506,41 @@
 
             <div id="page-transactions" style="display: none;">
                 <div class="table-container">
-                    <h3 style="margin-bottom: 15px;">All Transactions</h3>
-                    <table id="transactionsTable">
-                        <thead>
-                            <tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr>
-                        </thead>
-                        <tbody>
-                            <td><td colspan="6">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                    <div class="report-header">
+                        <h3>All Transactions</h3>
+                        <button class="btn-download" id="downloadPDFBtn">
+                            <span>📄</span> Download PDF Report
+                        </button>
+                    </div>
+                    <div class="filter-bar">
+                        <input type="date" id="filterStartDate" placeholder="Start Date">
+                        <input type="date" id="filterEndDate" placeholder="End Date">
+                        <select id="filterStatus">
+                            <option value="">All Status</option>
+                            <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                        <button class="btn-primary" id="applyFilterBtn">Apply Filter</button>
+                        <button class="btn-primary" id="clearFilterBtn" style="background: #666;">Clear</button>
+                    </div>
+                    <div style="overflow-x: auto;" id="transactionsTableContainer">
+                        <table id="transactionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Phone</th>
+                                    <th>Plan</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <tr><td colspan="6">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -479,7 +552,7 @@
                     <h3 style="margin-bottom: 15px;">Vouchers</h3>
                     <table id="vouchersTable">
                         <thead>
-                            <td><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr>
+                            <tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr>
                         </thead>
                         <tbody>
                             <tr><td colspan="6">Loading...</td></tr>
@@ -573,6 +646,8 @@
         let token = null;
         let socket = null;
         let currentPage = 'dashboard';
+        let allTransactions = [];
+        let currentFilteredTransactions = [];
 
         // Mobile menu functions
         function openMobileMenu() {
@@ -593,17 +668,14 @@
 
         // Show specific page
         function showPage(pageName) {
-            // Hide all pages
             document.getElementById('page-dashboard').style.display = 'none';
             document.getElementById('page-users').style.display = 'none';
             document.getElementById('page-transactions').style.display = 'none';
             document.getElementById('page-vouchers').style.display = 'none';
             document.getElementById('page-plans').style.display = 'none';
             
-            // Show selected page
             document.getElementById(`page-${pageName}`).style.display = 'block';
             
-            // Update page title
             const pageTitles = {
                 'dashboard': 'Dashboard',
                 'users': 'Active Users',
@@ -613,7 +685,6 @@
             };
             document.getElementById('pageTitle').textContent = pageTitles[pageName] || 'Dashboard';
             
-            // Load page data
             if (pageName === 'users') loadUsers();
             if (pageName === 'transactions') loadTransactions();
             if (pageName === 'vouchers') loadVouchers();
@@ -690,12 +761,12 @@
                 socket.on('payment_completed', (data) => {
                     showToast(`Payment completed: ${data.phoneNumber}`);
                     if (currentPage === 'dashboard') loadDashboardData();
+                    if (currentPage === 'transactions') loadTransactions();
                 });
                 socket.on('plans_updated', () => {
                     showToast('Plans have been updated!');
                     if (currentPage === 'plans') loadPlans();
                 });
-                // NEW: Listen for user deactivation events
                 socket.on('user_deactivated', (data) => {
                     showToast(`User has been deactivated`);
                     if (currentPage === 'dashboard') loadDashboardData();
@@ -705,6 +776,7 @@
                     showToast(`Voucher redeemed: ${data.phoneNumber}`);
                     if (currentPage === 'vouchers') loadVouchers();
                     if (currentPage === 'dashboard') loadDashboardData();
+                    if (currentPage === 'transactions') loadTransactions();
                 });
             } catch(e) { 
                 console.log('WebSocket not available'); 
@@ -790,24 +862,154 @@
         async function loadTransactions() {
             try {
                 const transactions = await apiRequest('/api/admin/transactions');
-                const tbody = document.querySelector('#transactionsTable tbody');
-                if (!transactions.length) {
-                    tbody.innerHTML = '<tr><td colspan="6">No transactions found</td></tr>';
-                } else {
-                    tbody.innerHTML = transactions.map(t => `
-                        <tr>
-                            <td>${new Date(t.created_at).toLocaleString()}</td>
-                            <td>${t.phone_number}</td>
-                            <td>${t.plan_name || '-'}</td>
-                            <td>KSh ${t.amount}</td>
-                            <td>${t.payment_method === 'voucher' ? '🎫 Voucher' : '📱 M-Pesa'}</td>
-                            <td><span class="status-badge status-${t.status}">${t.status}</span></td>
-                        </tr>
-                    `).join('');
-                }
+                allTransactions = transactions;
+                applyFilter();
             } catch (error) {
                 console.error('Failed to load transactions:', error);
             }
+        }
+
+        function applyFilter() {
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            const status = document.getElementById('filterStatus').value;
+            
+            let filtered = [...allTransactions];
+            
+            if (startDate) {
+                const start = new Date(startDate);
+                start.setHours(0,0,0,0);
+                filtered = filtered.filter(t => new Date(t.created_at) >= start);
+            }
+            
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23,59,59,999);
+                filtered = filtered.filter(t => new Date(t.created_at) <= end);
+            }
+            
+            if (status) {
+                filtered = filtered.filter(t => t.status === status);
+            }
+            
+            currentFilteredTransactions = filtered;
+            
+            const tbody = document.getElementById('transactionsTableBody');
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6">No transactions found</td></tr>';
+            } else {
+                tbody.innerHTML = filtered.map(t => `
+                    <tr>
+                        <td>${new Date(t.created_at).toLocaleString()}</td>
+                        <td>${t.phone_number}</td>
+                        <td>${t.plan_name || '-'}</td>
+                        <td>KSh ${t.amount}</td>
+                        <td>${t.payment_method === 'voucher' ? '🎫 Voucher' : '📱 M-Pesa'}</td>
+                        <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function downloadPDFReport() {
+            if (currentFilteredTransactions.length === 0) {
+                showToast('No transactions to download');
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+            
+            // Calculate totals
+            const totalAmount = currentFilteredTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            const completedCount = currentFilteredTransactions.filter(t => t.status === 'completed').length;
+            const pendingCount = currentFilteredTransactions.filter(t => t.status === 'pending').length;
+            const failedCount = currentFilteredTransactions.filter(t => t.status === 'failed').length;
+            
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(26, 26, 46);
+            doc.text('FastConnect Internet - Transactions Report', 14, 20);
+            
+            // Date range info
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            const startDate = document.getElementById('filterStartDate').value || 'All';
+            const endDate = document.getElementById('filterEndDate').value || 'All';
+            doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 36);
+            
+            // Summary stats
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Transactions: ${currentFilteredTransactions.length}`, 14, 48);
+            doc.text(`Total Revenue: KSh ${totalAmount.toLocaleString()}`, 14, 55);
+            doc.text(`Completed: ${completedCount} | Pending: ${pendingCount} | Failed: ${failedCount}`, 14, 62);
+            
+            // Table headers
+            const headers = ['Date', 'Phone Number', 'Plan', 'Amount (KES)', 'Payment Method', 'Status'];
+            const startY = 75;
+            
+            // Draw header background
+            doc.setFillColor(99, 102, 241);
+            doc.rect(14, startY, 285, 10, 'F');
+            
+            // Header text
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            const colWidths = [40, 40, 35, 30, 35, 35];
+            let x = 14;
+            headers.forEach((header, i) => {
+                doc.text(header, x + 2, startY + 7);
+                x += colWidths[i];
+            });
+            
+            // Table rows
+            doc.setTextColor(0, 0, 0);
+            let y = startY + 12;
+            let rowCount = 0;
+            
+            for (const t of currentFilteredTransactions) {
+                if (y > 190) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                const rowData = [
+                    new Date(t.created_at).toLocaleDateString(),
+                    t.phone_number,
+                    t.plan_name || '-',
+                    t.amount,
+                    t.payment_method === 'voucher' ? 'Voucher' : 'M-Pesa',
+                    t.status
+                ];
+                
+                x = 14;
+                rowData.forEach((data, i) => {
+                    doc.text(String(data), x + 2, y + 4);
+                    x += colWidths[i];
+                });
+                
+                y += 8;
+                rowCount++;
+                
+                if (rowCount % 30 === 0) {
+                    doc.addPage();
+                    y = 20;
+                }
+            }
+            
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text(`Page ${i} of ${pageCount} | FastConnect Internet`, 14, doc.internal.pageSize.height - 10);
+            }
+            
+            doc.save(`fastconnect_transactions_${new Date().toISOString().split('T')[0]}.pdf`);
+            showToast('PDF report downloaded successfully!');
         }
 
         async function loadVouchers() {
@@ -970,6 +1172,16 @@
                 submitBtn.disabled = false;
             }
         });
+
+        // Filter buttons
+        document.getElementById('applyFilterBtn').addEventListener('click', applyFilter);
+        document.getElementById('clearFilterBtn').addEventListener('click', () => {
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterStatus').value = '';
+            applyFilter();
+        });
+        document.getElementById('downloadPDFBtn').addEventListener('click', downloadPDFReport);
 
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
