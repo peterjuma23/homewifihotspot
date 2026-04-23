@@ -60,8 +60,13 @@
             height: 100%;
             background: #1a1a2e;
             color: white;
-            transition: all 0.3s;
+            transition: transform 0.3s ease;
             z-index: 100;
+            transform: translateX(0);
+        }
+
+        .sidebar.closed {
+            transform: translateX(-100%);
         }
 
         .sidebar-header {
@@ -97,9 +102,26 @@
             font-size: 1.2rem;
         }
 
+        /* Overlay for mobile menu */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
         .main-content {
             margin-left: 260px;
             padding: 20px;
+            transition: margin-left 0.3s ease;
         }
 
         .top-bar {
@@ -296,32 +318,6 @@
             border-color: #667eea;
         }
 
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            .mobile-menu-btn {
-                display: block;
-                background: none;
-                border: none;
-                font-size: 1.5rem;
-                cursor: pointer;
-            }
-            th, td {
-                padding: 8px;
-                font-size: 0.85rem;
-            }
-        }
-
         .loading {
             display: inline-block;
             width: 20px;
@@ -361,9 +357,26 @@
             display: none;
         }
 
+        /* Responsive Styles */
         @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
             .mobile-menu-btn {
                 display: block;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -388,6 +401,9 @@
     </div>
 
     <div id="dashboard" class="dashboard-container">
+        <!-- Sidebar Overlay for mobile -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h3>🚀 FastConnect</h3>
@@ -420,7 +436,7 @@
                     <h3 style="margin-bottom: 15px;">Recent Transactions</h3>
                     <table id="recentTransactionsTable">
                         <thead><tr><th>Time</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
-                        <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
+                        <tbody><tr><td colspan="5">Loading...</td></tr>
                     </table>
                 </div>
             </div>
@@ -430,7 +446,7 @@
                     <h3 style="margin-bottom: 15px;">Active Users</h3>
                     <table id="usersTable">
                         <thead><tr><th>Phone</th><th>Name</th><th>Plan</th><th>Expires</th><th>Data Used</th><th>Action</th></tr></thead>
-                        <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                        <tbody><tr><td colspan="6">Loading...</td></tr>
                     </table>
                 </div>
             </div>
@@ -440,7 +456,7 @@
                     <h3 style="margin-bottom: 15px;">All Transactions</h3>
                     <table id="transactionsTable">
                         <thead><tr><th>Date</th><th>Phone</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
-                        <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                        <tbody><tr><td colspan="6">Loading...</td></tr>
                     </table>
                 </div>
             </div>
@@ -453,7 +469,7 @@
                     <h3 style="margin-bottom: 15px;">Vouchers</h3>
                     <table id="vouchersTable">
                         <thead><tr><th>Code</th><th>Plan</th><th>Amount</th><th>Status</th><th>Used By</th><th>Created</th></tr></thead>
-                        <tbody><tr><td colspan="6">Loading...</td></tr></tbody>
+                        <tbody><tr><td colspan="6">Loading...</td></tr>
                     </table>
                 </div>
             </div>
@@ -474,7 +490,7 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="plansTableBody"><tr><td colspan="7">Loading...</td></tr></tbody>
+                        <tbody id="plansTableBody"><tr><td colspan="7">Loading...</td></tr>
                     </table>
                 </div>
             </div>
@@ -542,6 +558,23 @@
         let socket = null;
         let currentPage = 'dashboard';
 
+        // Mobile menu functions
+        function openMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
         if (localStorage.getItem('adminToken')) {
             token = localStorage.getItem('adminToken');
             showDashboard();
@@ -561,7 +594,7 @@
             try {
                 const response = await fetch('/api/admin/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type':application/json' },
                     body: JSON.stringify({ username, password })
                 });
                 const data = await response.json();
@@ -871,28 +904,40 @@
             }
         });
 
+        // Navigation with auto-close mobile menu
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 const page = item.dataset.page;
                 currentPage = page;
+                
+                // Update active state
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
+                
+                // Show selected page
                 document.querySelectorAll('[id^="page-"]').forEach(p => p.style.display = 'none');
                 document.getElementById(`page-${page}`).style.display = 'block';
                 document.getElementById('pageTitle').textContent = item.querySelector('span:last-child').textContent;
                 
+                // Load page data
                 if (page === 'users') loadUsers();
                 if (page === 'transactions') loadTransactions();
                 if (page === 'vouchers') loadVouchers();
                 if (page === 'plans') loadPlans();
                 if (page === 'dashboard') loadDashboardData();
+                
+                // Close mobile menu after selection (on mobile)
+                closeMobileMenu();
             });
         });
 
-        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.toggle('open');
-        });
+        // Mobile menu button click
+        document.getElementById('mobileMenuBtn').addEventListener('click', openMobileMenu);
+        
+        // Overlay click to close
+        document.getElementById('sidebarOverlay').addEventListener('click', closeMobileMenu);
 
+        // Close modals when clicking outside
         window.addEventListener('click', (e) => {
             const voucherModal = document.getElementById('voucherModal');
             const editModal = document.getElementById('editPlanModal');
@@ -900,6 +945,7 @@
             if (e.target === editModal) editModal.style.display = 'none';
         });
 
+        // Auto-refresh dashboard every 30 seconds
         setInterval(() => {
             if (token && currentPage === 'dashboard') loadDashboardData();
         }, 30000);
