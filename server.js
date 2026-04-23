@@ -319,6 +319,7 @@ async function completeTransaction(transactionId, phoneNumber, planName, planDur
                 [phoneNumber, planName, dataLimit, expiresAt]
             );
             await connection.commit();
+            console.log(`✅ Transaction ${transactionId} completed successfully`);
         } catch (error) {
             await connection.rollback();
             throw error;
@@ -416,8 +417,8 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
     
     if (dbAvailable && pool) {
         await pool.query(
-            `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, status)
-             VALUES (?, ?, ?, ?, ?, 'pending')`,
+            `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, status, created_at)
+             VALUES (?, ?, ?, ?, ?, 'pending', NOW())`,
             [transactionId, formattedPhone, amount, planName, plan?.duration_hours]
         );
     } else {
@@ -462,8 +463,8 @@ app.post('/api/voucher/redeem', async (req, res) => {
             
             const transactionId = generateTransactionId();
             await pool.query(
-                `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, payment_method, voucher_code, status, completed_at)
-                 VALUES (?, ?, ?, ?, ?, 'voucher', ?, 'completed', NOW())`,
+                `INSERT INTO transactions (transaction_id, phone_number, amount, plan_name, plan_duration_hours, payment_method, voucher_code, status, completed_at, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'voucher', ?, 'completed', NOW(), NOW())`,
                 [transactionId, phoneNumber, voucher.amount, voucher.plan_name, voucher.plan_duration_hours, voucherCode]
             );
             
@@ -554,7 +555,6 @@ app.post('/api/check-status', async (req, res) => {
             const [rows] = await pool.query(query, params);
             user = rows[0];
             
-            // Check if expired and update if needed
             if (user && user.expires_at && new Date(user.expires_at) < new Date()) {
                 await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
                 user.is_active = false;
@@ -571,7 +571,6 @@ app.post('/api/check-status', async (req, res) => {
             }
         }
         
-        // Check if user is active AND not expired
         const isActive = user && user.is_active === true && user.expires_at && new Date(user.expires_at) > new Date();
         
         if (isActive) {
@@ -632,33 +631,39 @@ app.post('/api/admin/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// FIXED: Get admin dashboard stats - only count truly active users
+// FIXED: Get admin dashboard stats - Now correctly calculates revenue
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
         
         if (dbAvailable && pool) {
-            // Only count users who are active AND not expired
-            const [activeCount] = await pool.query(
-                'SELECT COUNT(*) as count FROM users WHERE is_active = TRUE AND expires_at > NOW()'
+            // Active users (is_active = true AND not expired)
+            const [activeResult] = await pool.query(
+                'SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND expires_at > NOW()'
             );
-            stats.activeUsers = activeCount[0].count;
+            stats.activeUsers = activeResult[0]?.count || 0;
             
             // Total revenue from completed transactions
-            const [revenue] = await pool.query('SELECT SUM(amount) as total FROM transactions WHERE status = "completed"');
-            stats.totalRevenue = revenue[0].total || 0;
-            
-            // Today's revenue from completed transactions
-            const [todayRevenue] = await pool.query(
-                'SELECT SUM(amount) as total FROM transactions WHERE status = "completed" AND DATE(completed_at) = CURDATE()'
+            const [revenueResult] = await pool.query(
+                'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = "completed"'
             );
-            stats.todayRevenue = todayRevenue[0].total || 0;
+            stats.totalRevenue = parseFloat(revenueResult[0]?.total || 0);
+            
+            // Today's revenue - using created_at column
+            const [todayResult] = await pool.query(
+                'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = "completed" AND DATE(created_at) = CURDATE()'
+            );
+            stats.todayRevenue = parseFloat(todayResult[0]?.total || 0);
             
             // Total completed transactions
-            const [txnCount] = await pool.query('SELECT COUNT(*) as count FROM transactions WHERE status = "completed"');
-            stats.totalTransactions = txnCount[0].count;
+            const [countResult] = await pool.query(
+                'SELECT COUNT(*) as count FROM transactions WHERE status = "completed"'
+            );
+            stats.totalTransactions = countResult[0]?.count || 0;
+            
+            console.log('📊 Stats calculated:', stats);
         } else {
-            // In-memory stats
+            // In-memory fallback
             const now = new Date();
             stats.activeUsers = memoryStore.users.filter(u => u.is_active === true && new Date(u.expires_at) > now).length;
             const completedTxns = memoryStore.transactions.filter(t => t.status === 'completed');
@@ -673,6 +678,7 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
         
         res.json(stats);
     } catch (error) {
+        console.error('❌ Stats error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -684,7 +690,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
             const [users] = await pool.query(
                 `SELECT id, phone_number, name, plan_name, data_limit_mb, bytes_used, expires_at, is_active, created_at, last_seen 
                  FROM users 
-                 WHERE is_active = TRUE AND expires_at > NOW()
+                 WHERE is_active = 1 AND expires_at > NOW()
                  ORDER BY created_at DESC`
             );
             res.json(users);
@@ -838,7 +844,6 @@ app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
-// FIXED: Deactivate user - properly sets is_active to false
 app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -848,7 +853,6 @@ app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) 
             if (user) user.is_active = false;
         }
         
-        // Broadcast to all connected clients that user was deactivated
         io.emit('user_deactivated', { userId: req.params.id });
         
         res.json({ success: true });
