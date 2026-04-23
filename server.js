@@ -32,6 +32,9 @@ const M_PESA_PASSKEY = process.env.M_PESA_PASSKEY || '';
 const M_PESA_SHORTCODE = process.env.M_PESA_SHORTCODE || '174379';
 const M_PESA_ENV = process.env.M_PESA_ENV || 'sandbox';
 
+// Enable trust proxy for rate limiting behind reverse proxy (Render)
+app.set('trust proxy', 1);
+
 // Database connection pool
 let pool;
 
@@ -103,7 +106,7 @@ async function createTables() {
                 payment_method ENUM('mpesa', 'voucher') DEFAULT 'mpesa',
                 mpesa_receipt VARCHAR(50),
                 voucher_code VARCHAR(50),
-                status ENUM('pending', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
+                status VARCHAR(20) DEFAULT 'pending',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 completed_at DATETIME,
                 INDEX idx_phone (phone_number),
@@ -239,7 +242,8 @@ app.use((req, res, next) => {
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
-    message: { error: 'Too many requests, please try again later.' }
+    message: { error: 'Too many requests, please try again later.' },
+    skip: (req) => req.path === '/health' // Skip rate limiting for health check
 });
 app.use('/api/', limiter);
 
@@ -631,7 +635,7 @@ app.post('/api/admin/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// FIXED: Get admin dashboard stats - Now correctly calculates revenue
+// FIXED: Get admin dashboard stats - Using correct case for status
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
@@ -643,21 +647,21 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
             );
             stats.activeUsers = activeResult[0]?.count || 0;
             
-            // Total revenue from completed transactions
+            // Total revenue from completed transactions (status can be 'completed' or 'COMPLETED')
             const [revenueResult] = await pool.query(
-                'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = "completed"'
+                "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE LOWER(status) = 'completed'"
             );
             stats.totalRevenue = parseFloat(revenueResult[0]?.total || 0);
             
             // Today's revenue - using created_at column
             const [todayResult] = await pool.query(
-                'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = "completed" AND DATE(created_at) = CURDATE()'
+                "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE LOWER(status) = 'completed' AND DATE(created_at) = CURDATE()"
             );
             stats.todayRevenue = parseFloat(todayResult[0]?.total || 0);
             
             // Total completed transactions
             const [countResult] = await pool.query(
-                'SELECT COUNT(*) as count FROM transactions WHERE status = "completed"'
+                "SELECT COUNT(*) as count FROM transactions WHERE LOWER(status) = 'completed'"
             );
             stats.totalTransactions = countResult[0]?.count || 0;
             
