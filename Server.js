@@ -39,20 +39,35 @@ let pool;
 
 async function initDatabase() {
     try {
-        pool = mysql.createPool({
+        // Check if we have Aiven credentials (production) or local
+        const isAiven = process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud.com');
+        
+        const dbConfig = {
             host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT) || 3306,
             user: process.env.DB_USER || 'root',
             password: process.env.DB_PASSWORD || '',
             database: process.env.DB_NAME || 'fastconnect_db',
             waitForConnections: true,
-            connectionLimit: 10,
+            connectionLimit: 5,
             queueLimit: 0,
             enableKeepAlive: true,
-            keepAliveInitialDelay: 0
-        });
+            keepAliveInitialDelay: 10000,
+            connectTimeout: 10000
+        };
+        
+        // Add SSL for Aiven
+        if (isAiven) {
+            dbConfig.ssl = {
+                rejectUnauthorized: false
+            };
+            console.log('🔒 Using Aiven SSL connection');
+        }
+        
+        pool = mysql.createPool(dbConfig);
         
         const connection = await pool.getConnection();
-        console.log('✅ MySQL database connected');
+        console.log('✅ MySQL database connected successfully');
         connection.release();
         
         await createTables();
@@ -385,6 +400,7 @@ async function getAllPlans() {
 
 // ==================== API ROUTES ====================
 
+// Get all available plans (for customer portal)
 app.get('/api/plans', async (req, res) => {
     try {
         const plans = await getAllPlans();
@@ -394,6 +410,7 @@ app.get('/api/plans', async (req, res) => {
     }
 });
 
+// Initiate M-Pesa payment
 app.post('/api/mpesa/stkpush', async (req, res) => {
     const { phoneNumber, planName, amount } = req.body;
     
@@ -435,6 +452,7 @@ app.post('/api/mpesa/stkpush', async (req, res) => {
     res.json({ success: true, message: 'STK Push sent successfully', transactionId: transactionId });
 });
 
+// Redeem voucher
 app.post('/api/voucher/redeem', async (req, res) => {
     const { voucherCode, phoneNumber, customerName } = req.body;
     
@@ -529,6 +547,7 @@ app.post('/api/voucher/redeem', async (req, res) => {
     }
 });
 
+// Check user status
 app.post('/api/check-status', async (req, res) => {
     const { phoneNumber, macAddress } = req.body;
     
@@ -591,6 +610,7 @@ app.post('/api/check-status', async (req, res) => {
 
 // ==================== ADMIN API ROUTES ====================
 
+// Admin login
 app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -621,11 +641,13 @@ app.post('/api/admin/login', async (req, res) => {
     }
 });
 
+// Admin logout
 app.post('/api/admin/logout', (req, res) => {
     res.clearCookie('admin_token');
     res.json({ success: true });
 });
 
+// Get dashboard stats
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     try {
         let stats = { activeUsers: 0, totalRevenue: 0, todayRevenue: 0, totalTransactions: 0 };
@@ -656,6 +678,7 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Get all active users
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -674,6 +697,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Get all transactions
 app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -687,6 +711,7 @@ app.get('/api/admin/transactions', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Get all plans (for admin)
 app.get('/api/admin/plans', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -700,6 +725,7 @@ app.get('/api/admin/plans', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Update a plan
 app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
     const { id, plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps, is_active } = req.body;
     
@@ -724,6 +750,7 @@ app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
             }
         }
         
+        // Broadcast to all connected clients that plans were updated
         io.emit('plans_updated');
         res.json({ success: true, message: 'Plan updated successfully' });
     } catch (error) {
@@ -731,6 +758,7 @@ app.put('/api/admin/plans/update', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Add a new plan
 app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
     const { plan_name, duration_hours, price_kes, data_limit_mb, speed_mbps } = req.body;
     
@@ -761,6 +789,7 @@ app.post('/api/admin/plans', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Create voucher
 app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     const { planName, quantity } = req.body;
     
@@ -801,6 +830,7 @@ app.post('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Get all vouchers
 app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -814,6 +844,7 @@ app.get('/api/admin/vouchers', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Deactivate user
 app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) => {
     try {
         if (dbAvailable && pool) {
@@ -828,6 +859,7 @@ app.post('/api/admin/users/:id/deactivate', authenticateAdmin, async (req, res) 
     }
 });
 
+// M-Pesa Callback endpoint
 app.post('/api/mpesa/callback', async (req, res) => {
     console.log('M-Pesa Callback received:', JSON.stringify(req.body));
     res.json({ ResultCode: 0, ResultDesc: 'Success' });
@@ -855,6 +887,7 @@ io.on('connection', (socket) => {
 async function startServer() {
     dbAvailable = await initDatabase();
     
+    // Serve HTML pages
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'captive-portal.html'));
     });
@@ -863,6 +896,7 @@ async function startServer() {
         res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
     });
     
+    // Health check for Render
     app.get('/health', (req, res) => {
         res.json({ status: 'ok', timestamp: new Date().toISOString(), dbConnected: dbAvailable });
     });
